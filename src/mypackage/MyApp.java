@@ -95,7 +95,7 @@ public class MyApp extends UiApplication
             	_screen.close();
             }
         } );
-        pushScreen(_secondaryScreen2);
+        //pushScreen(_secondaryScreen2);
         
         // FADE IN
         TransitionContext transition = new TransitionContext(TransitionContext.TRANSITION_FADE);
@@ -170,8 +170,8 @@ public class MyApp extends UiApplication
     
     public void updateStatus(String val)
     {    	
-    	//_screen.updateStatus(val);
-    	_secondaryScreen2.updateStatus(val);
+    	_screen.updateStatus(val);
+    	//_secondaryScreen2.updateStatus(val);
     }
 
     
