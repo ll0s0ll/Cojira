@@ -16,7 +16,7 @@
 	GNU General Public License for more details.
 	
 	You should have received a copy of the GNU General Public License
-    along with Cojira.  If not, see <http://www.gnu.org/licenses/>.
+	along with Cojira.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 
@@ -95,7 +95,7 @@ public class MyApp extends UiApplication
             	_screen.close();
             }
         } );
-        //pushScreen(_secondaryScreen2);
+        pushScreen(_secondaryScreen2);
         
         // FADE IN
         TransitionContext transition = new TransitionContext(TransitionContext.TRANSITION_FADE);
@@ -170,8 +170,8 @@ public class MyApp extends UiApplication
     
     public void updateStatus(String val)
     {    	
-    	_screen.updateStatus(val);
-    	//_secondaryScreen2.updateStatus(val);
+    	//_screen.updateStatus(val);
+    	_secondaryScreen2.updateStatus(val);
     }
 
     
