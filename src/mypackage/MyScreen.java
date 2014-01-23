@@ -125,22 +125,6 @@ public final class MyScreen extends MainScreen implements FocusChangeListener, F
     	
     	_statusField = new BasicEditField(Field.NON_FOCUSABLE);
         add(_statusField);
-    	
-        new Thread(new Runnable()
-        {
-			public void run()
-			{
-				try {
-					_app.selectTransport();
-					_app._auth.getAuthKey();
-				} catch (Exception e) {
-					updateStatus("run():" + e.toString());
-				}
-				
-			}
-        }).start();
-    	
-        
         
     	/*
     	// Transition ST
