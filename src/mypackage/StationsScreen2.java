@@ -469,10 +469,20 @@ public class StationsScreen2 extends MainScreen
         {
             public void run()
             {
-                _statusField.setText(_statusField.getText() + "\n" + message);
+            	_statusField.setText(_statusField.getText() + "\n" + message);
             }
         });
     } //updateStatus()
+	
+	public void updateStatusField(String val)
+	{
+		LabelField _tmpField = new LabelField(val, Field.FIELD_HCENTER);
+		_tmpField.setFont(Font.getDefault().derive(Font.PLAIN, (Font.getDefault().getHeight(Ui.UNITS_pt) - 1), Ui.UNITS_pt));
+		synchronized (UiApplication.getEventLock()) 
+		{		
+			this.setStatus(_tmpField);
+		}
+	}
 	
 	public void updateTitleBarTitle(String val)
 	{
@@ -615,7 +625,6 @@ public class StationsScreen2 extends MainScreen
 		{		
 			this.setStatus(_tmpField);
 		}
-		
 		_app.selectTransport();
 	}
 	
@@ -627,7 +636,7 @@ public class StationsScreen2 extends MainScreen
 		{		
 			this.setStatus(_tmpField);
 		}
-
+		
 		try {
 			_app._auth.doAuth();
 		} catch (Exception e) {
@@ -695,15 +704,13 @@ public class StationsScreen2 extends MainScreen
         addMenuItem(_prog);
         
         
-        MenuItem _tester = new MenuItem(new StringProvider("テスト用"), 0x00020000, 1);
+        MenuItem _tester = new MenuItem(new StringProvider("更新"), 0x00020000, 1);
         _tester.setCommand(new Command(        
 	        new CommandHandler()
 	        {
 	        	public void execute(ReadOnlyCommandMetadata metadata, Object context)
 	            {
-	        		//_controller
-	        		//_tableView.nextFocus(1, Field.AXIS_SEQUENTIAL);
-	        		//.nextFocus(direction, axis);
+	        		getProgramInfo();
 	            }        	
 	        }
         ));
