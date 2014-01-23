@@ -72,7 +72,7 @@ public final class EPG
 		try {
 			updateStatus("Connecting..(EPG)");	    	
 
-			if((areaID = _app._auth.getAreaID()) == null)
+			if((areaID = _app._auth.getCurrentAreaID()) == null)
 				throw new Exception("AreaID Error");
 						
 			String url = "http://radiko.jp/v2/station/list/" + areaID + ".xml";
@@ -340,7 +340,7 @@ public final class EPG
 	 
 	 public void getProgramInfo() throws Exception
 	 {
-		 if((areaID = _app._auth.getAreaID()) == null)
+		 if((areaID = _app._auth.getCurrentAreaID()) == null)
 			 throw new Exception("AreaID Error");
 		 
 		 String url = "http://radiko.jp//v2/api/program/now?area_id=" + areaID;
