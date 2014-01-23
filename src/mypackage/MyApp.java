@@ -210,6 +210,10 @@ public class MyApp extends UiApplication
     	return _connectionFactory;
     }
     
+    public StationsScreen2 getMainScreen()
+    {
+    	return _secondaryScreen2;
+    }
     
     public void pushMyScreen()
     {
