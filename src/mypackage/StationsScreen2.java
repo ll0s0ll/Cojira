@@ -244,7 +244,7 @@ public class StationsScreen2 extends MainScreen
 		if(!isContextMenuOpened && !isMenuOpened)
 		{
 			// 番組情報を更新
-			getProgramInfo();
+			//getProgramInfo();
 		}
 		
 		isContextMenuOpened = false;
@@ -630,7 +630,6 @@ public class StationsScreen2 extends MainScreen
 
 		try {
 			_app._auth.doAuth();
-			//_app._auth.getAuthKey();
 		} catch (Exception e) {
 			
 			UiApplication.getUiApplication().invokeAndWait(new Runnable()
