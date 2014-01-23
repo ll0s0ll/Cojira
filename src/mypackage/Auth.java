@@ -68,7 +68,7 @@ public class Auth
 	    
 		//---- Get AuthToken,keylength,keyoffset
 	    try {	
-	    	
+	    	_app.getMainScreen().updateStatusField("接続中...");
 	    	ConnectionDescriptor conDescriptor = _app.GetConnectionFactory().getConnection( url );
 	
 	    	if (conDescriptor == null)
@@ -138,6 +138,7 @@ public class Auth
 	    
 		//---- Get AreaID
 		try {
+			_app.getMainScreen().updateStatusField("エリア判定中...");
 	    	ConnectionDescriptor conDescriptor = _app.GetConnectionFactory().getConnection( url2 );
 	
 	    	if (conDescriptor == null)
@@ -203,7 +204,7 @@ public class Auth
 		return authToken;
 	}
 	
-	public String getAreaID()
+	public String getCurrentAreaID()
 	{
 		return areaID;
 	}
