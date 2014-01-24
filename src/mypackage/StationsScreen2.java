@@ -16,7 +16,7 @@
 	GNU General Public License for more details.
 	
 	You should have received a copy of the GNU General Public License
-    along with Cojira.  If not, see <http://www.gnu.org/licenses/>.
+	along with Cojira.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 package mypackage;
@@ -478,11 +478,12 @@ public class StationsScreen2 extends MainScreen
 	{
 		LabelField _tmpField = new LabelField(val, Field.FIELD_HCENTER);
 		_tmpField.setFont(Font.getDefault().derive(Font.PLAIN, (Font.getDefault().getHeight(Ui.UNITS_pt) - 1), Ui.UNITS_pt));
+		_tmpField.setPadding(10, 0, 0, 0);
 		synchronized (UiApplication.getEventLock()) 
 		{		
 			this.setStatus(_tmpField);
 		}
-	}
+	} //updateStatusField()
 	
 	public void updateTitleBarTitle(String val)
 	{
@@ -604,13 +605,7 @@ public class StationsScreen2 extends MainScreen
 				} 
 				catch (Exception e)
 				{
-					LabelField _tmpField = new LabelField("番組情報の更新に失敗しました。", Field.FIELD_HCENTER);
-					_tmpField.setFont(Font.getDefault().derive(Font.PLAIN, (Font.getDefault().getHeight(Ui.UNITS_pt) - 1), Ui.UNITS_pt));
-					_tmpField.setPadding(10, 0, 0, 0);
-					synchronized (UiApplication.getEventLock()) 
-					{		
-						setStatus(_tmpField);
-					}             
+					updateStatusField("番組情報の更新に失敗しました。");
 				} //try
 			} //run()
         }).start();
@@ -619,23 +614,13 @@ public class StationsScreen2 extends MainScreen
 	
 	private void init_setupTransport()
 	{
-		LabelField _tmpField = new LabelField("トランスポートを選択中...", Field.FIELD_HCENTER);
-		_tmpField.setFont(Font.getDefault().derive(Font.PLAIN, (Font.getDefault().getHeight(Ui.UNITS_pt) - 1), Ui.UNITS_pt));		
-		synchronized (UiApplication.getEventLock()) 
-		{		
-			this.setStatus(_tmpField);
-		}
+		updateStatusField("トランスポートを選択中...");
 		_app.selectTransport();
 	}
 	
 	private void init_doAuth()
 	{
-		LabelField _tmpField = new LabelField("エリア判定 & 認証中...", Field.FIELD_HCENTER);
-		_tmpField.setFont(Font.getDefault().derive(Font.PLAIN, (Font.getDefault().getHeight(Ui.UNITS_pt) - 1), Ui.UNITS_pt));
-		synchronized (UiApplication.getEventLock()) 
-		{		
-			this.setStatus(_tmpField);
-		}
+		updateStatusField("エリア判定 & 認証中...");
 		
 		try {
 			_app._auth.doAuth();
@@ -661,12 +646,7 @@ public class StationsScreen2 extends MainScreen
 	
 	private void init_getStationList()
 	{
-		LabelField _tmpField = new LabelField("放送局を取得中...", Field.FIELD_HCENTER);
-		_tmpField.setFont(Font.getDefault().derive(Font.PLAIN, (Font.getDefault().getHeight(Ui.UNITS_pt) - 1), Ui.UNITS_pt));
-		synchronized (UiApplication.getEventLock()) 
-		{		
-			this.setStatus(_tmpField);
-		}
+		updateStatusField("放送局を取得中...");
 		
 		try {
 			_app._epg.getStationList();
