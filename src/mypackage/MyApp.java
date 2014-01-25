@@ -41,103 +41,103 @@ public class MyApp extends UiApplication
 	private Runnable _onCloseRunnable;
 	private ConnectionFactory _connectionFactory;
 	
-    /**
-     * Entry point for application
-     * @param args Command line arguments (not used)
-     */ 
-    public static void main(String[] args)
-    {
-        // Create a new instance of the application and make the currently
-        // running thread the application's event dispatch thread.
-        MyApp theApp = new MyApp();       
-        theApp.enterEventDispatcher();
-    }
-    
-
-    /**
-     * Creates a new MyApp object
-     */
-    public MyApp()
-    {
-    	_mediaActions = new MediaActions(this);
-    	_auth = new Auth(this);
-    	_epg = new EPG(this);
-    	
-        // Push a screen onto the UI stack for rendering.
-    	_screen = new MyScreen();
-    	_screen.setOnCloseRunnable(new Runnable()
-        {
-        	public void run(){ close(); }
-        });
-        pushScreen(_screen);        
-    } //MyApp()
-
-    
-    public void setOnCloseRunnable( Runnable runnable )
-    {
-        _onCloseRunnable = runnable;
-    }
-    
-    private void close()
-    {
-        Runnable runnable = _onCloseRunnable;
-        if ( runnable != null )
-        {
-            _onCloseRunnable = null;
-            try
-            {
-                runnable.run();
-            }
-            catch ( Throwable e )
-            {                
-            }
-        }
-        
-        if(_mediaActions != null){ _mediaActions = null; }
-        if(_auth != null){ _auth = null; }
-    }
-    
-    public ConnectionFactory getConnectionFactory()
-    {
-    	return _connectionFactory;
-    }
-    
-    public MyScreen getMainScreen()
-    {
-    	return _screen;
-    }
-    
-    public void selectTransport()
-    {
-    	/*
-    	int[] availableTransport = TransportInfo.getAvailableTransportTypes();
-    	
-    	for(int i=0; i<availableTransport.length; i++)
-    	{
-    		updateStatus("availableTransport: " + Integer.toString(availableTransport[i]));
-    	}
-    	*/
-    	
-    	_connectionFactory = new ConnectionFactory();
-    	
-    	int[] preferredTransports = new int[]{
-    			TransportInfo.TRANSPORT_TCP_WIFI,
-    			TransportInfo.TRANSPORT_TCP_CELLULAR
-    	};
-    	_connectionFactory.setPreferredTransportTypes(preferredTransports);
-    	
-    	// DirectTCP APN
-    	//TcpCellularOptions tcpOptions = new TcpCellularOptions();
-        //tcpOptions.setApn("mpr.ex-pkt.net");
-        //tcpOptions.setTunnelAuthUsername("");
-        //tcpOptions.setTunnelAuthPassword("");
-        //_connectionFactory.setTransportTypeOptions(TransportInfo.TRANSPORT_TCP_CELLULAR, tcpOptions);
-    	
-    	//return _connectionFactory;
-    } //selectTransport()
-    
-    public void updateStatus(String val)
-    {
-    	_screen.updateStatus(val);
-    }
+	/**
+	 * Entry point for application
+	 * @param args Command line arguments (not used)
+	 */ 
+	public static void main(String[] args)
+	{
+		// Create a new instance of the application and make the currently
+		// running thread the application's event dispatch thread.
+		MyApp theApp = new MyApp();
+		theApp.enterEventDispatcher();
+	}
+	
+	
+	/**
+	 * Creates a new MyApp object
+	 */
+	public MyApp()
+	{
+		_mediaActions = new MediaActions(this);
+		_auth = new Auth(this);
+		_epg = new EPG(this);
+		
+		// Push a screen onto the UI stack for rendering.
+		_screen = new MyScreen();
+		_screen.setOnCloseRunnable(new Runnable()
+		{
+			public void run(){ close(); }
+		});
+		pushScreen(_screen);
+	} //MyApp()
+	
+	
+	public void setOnCloseRunnable( Runnable runnable )
+	{
+		_onCloseRunnable = runnable;
+	}
+	
+	private void close()
+	{
+		Runnable runnable = _onCloseRunnable;
+		if ( runnable != null )
+		{
+			_onCloseRunnable = null;
+			try
+			{
+				runnable.run();
+			}
+			catch ( Throwable e )
+			{
+			}
+		}
+		
+		if(_mediaActions != null){ _mediaActions = null; }
+		if(_auth != null){ _auth = null; }
+	}
+	
+	public ConnectionFactory getConnectionFactory()
+	{
+		return _connectionFactory;
+	}
+	
+	public MyScreen getMainScreen()
+	{
+		return _screen;
+	}
+	
+	public void selectTransport()
+	{
+		/*
+		int[] availableTransport = TransportInfo.getAvailableTransportTypes();
+	
+		for(int i=0; i<availableTransport.length; i++)
+		{
+			updateStatus("availableTransport: " + Integer.toString(availableTransport[i]));
+		}
+		*/
+		
+		_connectionFactory = new ConnectionFactory();
+		
+		int[] preferredTransports = new int[]{
+				TransportInfo.TRANSPORT_TCP_WIFI,
+				TransportInfo.TRANSPORT_TCP_CELLULAR
+		};
+		_connectionFactory.setPreferredTransportTypes(preferredTransports);
+		
+		// DirectTCP APN
+		//TcpCellularOptions tcpOptions = new TcpCellularOptions();
+		//tcpOptions.setApn("mpr.ex-pkt.net");
+		//tcpOptions.setTunnelAuthUsername("");
+		//tcpOptions.setTunnelAuthPassword("");
+		//_connectionFactory.setTransportTypeOptions(TransportInfo.TRANSPORT_TCP_CELLULAR, tcpOptions);
+		
+		//return _connectionFactory;
+	} //selectTransport()
+	
+	public void updateStatus(String val)
+	{
+		_screen.updateStatus(val);
+	}
 } //MyApp
