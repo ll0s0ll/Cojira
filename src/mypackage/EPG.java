@@ -96,7 +96,7 @@ public final class EPG
 	} //getProgramInfo()
 	
 	public Vector GetStationsInfoV()
-	{		
+	{
 		return stationsInfoV;
 	}
 	
@@ -105,7 +105,7 @@ public final class EPG
 		HttpConnection httpconn = null;
 		
 		try {
-			updateStatus("Connecting..(EPG)");	    	
+			updateStatus("Connecting..(EPG)");
 
 			if((areaID = _app._auth.getCurrentAreaID()) == null)
 				throw new Exception("AreaID Error");
@@ -121,7 +121,7 @@ public final class EPG
 			
 		} finally {
 			if(httpconn != null){ httpconn.close(); }
-	    }
+		}
 	} //getStationList()
 	
 	public void SetCurrentStation(int val)
@@ -136,26 +136,26 @@ public final class EPG
 		HttpConnection httpconn = null;
 		 
 		try {
-			//updateStatus("Connecting..(EPG INFO SAX)");	    	
+			//updateStatus("Connecting..(EPG INFO SAX)");
 	
 			ConnectionDescriptor conDescriptor = _app.getConnectionFactory().getConnection( url );
 			
 			if (conDescriptor == null)
-				throw new Exception("conDescriptor ERROR");    		
+				throw new Exception("conDescriptor ERROR");
 			
 			// using the connection
-			httpconn = (HttpConnection) conDescriptor.getConnection();   	
+			httpconn = (HttpConnection) conDescriptor.getConnection();
 				
 			// Set the request method and headers
 			httpconn.setRequestMethod(HttpConnection.GET);
 
 			int rc = httpconn.getResponseCode();
-			if (rc != HttpConnection.HTTP_OK)        
+			if (rc != HttpConnection.HTTP_OK)
 				throw new IOException("SAX HTTP response code: " + rc);
-			 
+			
 			saxparser.parse(httpconn.openDataInputStream(), handler);
 			//saxparser.parse(url, handler, false);
-			 
+			
 		} finally {
 			if(httpconn != null){ httpconn.close(); }
 		}
@@ -167,45 +167,45 @@ public final class EPG
 			throw new Exception("stationsInfoV is NULL");
 		
 		for(Enumeration e = stationsInfoV.elements(); e.hasMoreElements(); )
-        {
-        	Hashtable station = (Hashtable) e.nextElement();
-        	
-        	// LOGO
-        	Bitmap bitmap = GetWebBitmap((String) station.get("logo_medium"));
-        	
-        	station.put("station_logo",	bitmap);
-        }		
+		{
+			Hashtable station = (Hashtable) e.nextElement();
+	
+			// LOGO
+			Bitmap bitmap = GetWebBitmap((String) station.get("logo_medium"));
+
+			station.put("station_logo",	bitmap);
+		}
 	}
 	
 	private Bitmap GetWebBitmap(String url) throws Exception
-    {
-    	InputStream is;
-    	byte[] imageData;
-    	
-    	ConnectionFactory _factory = _app.getConnectionFactory();
-    	if(_factory == null)
-    		throw new IOException("[bitmap] _factory Error");
-    	
-    	
-    	ConnectionDescriptor conDescriptor = _factory.getConnection(url);
-    	if(conDescriptor == null)
-    		throw new IOException("[bitmap] conDescriptor Error");
-    	
-    	HttpConnection httpconn = (HttpConnection) conDescriptor.getConnection();
-    	
-    	try {
-	    	httpconn.setRequestMethod(HttpConnection.GET);
-	        
-	        int rc = httpconn.getResponseCode();
-	        if (rc != HttpConnection.HTTP_OK)        
-	            throw new IOException("HTTP response code: " + rc);      
-	        
-	        is = httpconn.openInputStream();
-	        if((imageData = IOUtilities.streamToBytes(is)) == null)
-	        	throw new IOException("[bitmap] imageData Error");
-	        
-	        return Bitmap.createBitmapFromBytes(imageData, 0, -1, Bitmap.SCALE_TO_FIT);
-	        
+	{
+		InputStream is;
+		byte[] imageData;
+	
+		ConnectionFactory _factory = _app.getConnectionFactory();
+		if(_factory == null)
+			throw new IOException("[bitmap] _factory Error");
+
+	
+		ConnectionDescriptor conDescriptor = _factory.getConnection(url);
+		if(conDescriptor == null)
+			throw new IOException("[bitmap] conDescriptor Error");
+
+		HttpConnection httpconn = (HttpConnection) conDescriptor.getConnection();
+
+		try {
+			httpconn.setRequestMethod(HttpConnection.GET);
+
+			int rc = httpconn.getResponseCode();
+			if (rc != HttpConnection.HTTP_OK)
+				throw new IOException("HTTP response code: " + rc);
+
+			is = httpconn.openInputStream();
+			if((imageData = IOUtilities.streamToBytes(is)) == null)
+				throw new IOException("[bitmap] imageData Error");
+	
+			return Bitmap.createBitmapFromBytes(imageData, 0, -1, Bitmap.SCALE_TO_FIT);
+
 		} finally {
 			if(httpconn != null){ 
 				try {
@@ -213,23 +213,23 @@ public final class EPG
 				} catch (IOException e) {} 
 			}
 		}
-    } //GetWebBitmap
+	} //GetWebBitmap
 	
 	
 	private void updateStatus(String val)
 	{
-		synchronized (UiApplication.getEventLock()) 
+		synchronized (UiApplication.getEventLock())
 		{
 			_app.updateStatus("[EPG] " + val);
 		}
 	}
 	
-	private class StationParserHandler extends DefaultHandler 
+	private class StationParserHandler extends DefaultHandler
 	{
 		private Stack stack = new Stack();
 		private Hashtable ht;
 		
-		public void startElement(String uri, String localName, String qname, Attributes attributes) throws SAXException 
+		public void startElement(String uri, String localName, String qname, Attributes attributes) throws SAXException
 		{
 			stack.push(qname);
 			
@@ -269,8 +269,8 @@ public final class EPG
 	} //StationParserHandler
 	
 	
-	private class ProgramParserHandler extends DefaultHandler 
-	{		
+	private class ProgramParserHandler extends DefaultHandler
+	{
 		private  Hashtable ht = new Hashtable();
 		private Stack stack = new Stack();
 		private int num = 0;
@@ -280,28 +280,28 @@ public final class EPG
 		public ProgramParserHandler()
 		{
 			// DO NOTHING
-		}		
+		}
 		
-		public void startElement(String uri, String localName, String qname, Attributes attributes) throws SAXException 
+		public void startElement(String uri, String localName, String qname, Attributes attributes) throws SAXException
 		{
 			stack.push(qname);
-		 
+		
 			if(qname.equals("station"))
-			{				 
+			{
 				//updateStatus("startElement() " + qname);
 				isFirstProgtag = true;
 			}
-		 
+		
 			if(qname.equals("prog"))
 			{
 				ht = null;
 				ht = new Hashtable();
-	                  
+				
 				StringBuffer ftl = new StringBuffer(attributes.getValue("ftl"));
 				ftl.insert(2, ":");
 				StringBuffer tol = new StringBuffer(attributes.getValue("tol"));
 				tol.insert(2, ":");
-	         
+	
 				ht.put("time", ftl.toString() + " - " + tol.toString());
 			}
 		} //startElement()
@@ -312,26 +312,26 @@ public final class EPG
 			if(qName.equals("prog"))
 			{
 				//updateStatus("endElement() " + qName);
-			 
+			
 				Hashtable station = (Hashtable)stationsInfoV.elementAt(num);
 				if(isFirstProgtag)
 					station.put("prog_now", ht);
 				else
 					station.put("prog_next", ht);
-			 
+			
 				isFirstProgtag = false;
 			}
-		 
+		
 			if(qName.equals("station"))
 			{
 				//updateStatus("endElement() " + qName);
-			 
+			
 				num++;
 			}
-		 
+		
 			stack.pop();
 		} //endElement()
-	 
+	
 		public void characters(char[] ch, int start, int length) throws SAXException 
 		{
 			if(stack.peek().equals("title"))
@@ -340,7 +340,7 @@ public final class EPG
 				//updateStatus("characters() " + element);
 				ht.put("title", element);
 			}
-		 
+		
 			if(stack.peek().equals("pfm"))
 			{
 				String element = new String(ch, start, length);
@@ -360,14 +360,14 @@ public final class EPG
 				String element = new String(ch, start, length);
 				//updateStatus("characters() " + element);
 				ht.put("info", element);
-			}	
+			}
 			
 			if(stack.peek().equals("url"))
 			{
 				String element = new String(ch, start, length);
 				//updateStatus("characters() " + element);
 				ht.put("url", element);
-			}	
+			}
 			
 		} //characters()
 	 } //ProgramParserHandler
