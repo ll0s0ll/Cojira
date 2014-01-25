@@ -16,7 +16,7 @@
 	GNU General Public License for more details.
 	
 	You should have received a copy of the GNU General Public License
-    along with Cojira.  If not, see <http://www.gnu.org/licenses/>.
+	along with Cojira.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 package mypackage;
@@ -39,7 +39,7 @@ public class MediaActions implements MediaActionHandler, PlayerListener
 {
 	private MyApp _app;
 	private RTMP _rtmp;
-	private Player _player;	
+	private Player _player;
 	private int currentVolume;
 	private boolean isOperating;
 	
@@ -49,32 +49,31 @@ public class MediaActions implements MediaActionHandler, PlayerListener
 		// 
 		_app = (MyApp) app;
 		
-		// 
-        _app.setOnCloseRunnable(new Runnable()
-        {
-            public void run() { close(); }
-        } );
+		_app.setOnCloseRunnable(new Runnable()
+		{
+			public void run() { close(); }
+		} );
 	}
 	
-
+	
 	public void Init()
-	{	
-        // Add Handler		
-        _app.addMediaActionHandler(this);
-        
-        // Set initial volume
-        currentVolume = 20;
-        
-        //
-        isOperating = false;
+	{
+		// Add Handler
+		_app.addMediaActionHandler(this);
+		
+		// Set initial volume
+		currentVolume = 20;
+		
+		//
+		isOperating = false;
 	}
 
-    
+	
 	private void close()
-    {
-    	doStop();
-    	
-    	// Reset AudioPath
+	{
+		doStop();
+		
+		// Reset AudioPath
 		AudioPathControl _audioPathCtrl = (AudioPathControl) _player.getControl("net.rim.device.api.media.control.AudioPathControl");
 		try {
 			_audioPathCtrl.resetAudioPath();
@@ -83,90 +82,90 @@ public class MediaActions implements MediaActionHandler, PlayerListener
 		}
 		
 		UiApplication app = _app;
-        _app = null;
-        if ( app != null )
-        {
-            app.removeMediaActionHandler(this);
-            app = null;
-        }       
-    }	
-
+		_app = null;
+		if ( app != null )
+		{
+			app.removeMediaActionHandler(this);
+			app = null;
+		}
+	}
+	
 	
 	// Invoked MediaActionHandler
- 	public boolean mediaAction(int action, int source, Object context)
- 	{
- 		switch (action) 
-         {
-             case MEDIA_ACTION_VOLUME_UP:	                	
-             {
-                 return doVolumeUp();
-             }
-             case MEDIA_ACTION_VOLUME_DOWN:
-             {
-                 return doVolumeDown();            	
-             }           
-             case MEDIA_ACTION_MUTE:
-                 //return mediaActions.doMute(true);
-             	updateStatus("MEDIA_ACTION_MUTE");
-             	break;
-             case MEDIA_ACTION_UNMUTE:
-                 //return mediaActions.doMute(false);
-             	updateStatus("MEDIA_ACTION_UNMUTE");
-             	break;
-             case MEDIA_ACTION_MUTE_TOGGLE:
-                 //return mediaActions.doMute(!isMuted(_volumeController));
-             	updateStatus("MEDIA_ACTION_MUTE_TOGGLE");
-             	break;
-             case MEDIA_ACTION_PLAYPAUSE_TOGGLE:
-             {
-             	updateStatus("MEDIA_ACTION_PLAYPAUSE_TOGGLE");
-             	
-                if (isPlaying()) 
-                {
-                    //actionRunnable = new MediaAction(MEDIA_ACTION_PAUSE, source, context, MediaPlayerDemo.this);               
-                	return doStop();
-                } 
-                else 
-                {
-                    //actionRunnable = new MediaAction(MEDIA_ACTION_PLAY, source, context, MediaPlayerDemo.this);
-                	updateTitleBarTitle("バッファ中...");
-                	return doPlay();
-                }
-             }  
-             //case MEDIA_ACTION_CHANGE_TRACK:
-             case MEDIA_ACTION_NEXT_TRACK:
-            	 break;
-             case MEDIA_ACTION_PAUSE:
-            	 break;
-             case MEDIA_ACTION_PLAY:
-             {
-            	 updateStatus("MEDIA_ACTION_PLAY");
-            	 updateTitleBarTitle("バッファ中...");
-            	 return doPlay();
-             }
-             case MEDIA_ACTION_PREV_TRACK:
-            	 break;
-             case MEDIA_ACTION_STOP:
-             {
-            	 updateStatus("MEDIA_ACTION_STOP");	
-            	 return doStop();
-             }
-             default:
-                 //actionRunnable = null;
-             	updateStatus("default");	                	
-                 break;
-         }
- 			
- 		return false;
- 	} // mediaAction()
-	 	
+	public boolean mediaAction(int action, int source, Object context)
+	{
+		switch (action) 
+		{
+		case MEDIA_ACTION_VOLUME_UP:
+		{
+			return doVolumeUp();
+		}
+		case MEDIA_ACTION_VOLUME_DOWN:
+		{
+			return doVolumeDown();
+		}
+		case MEDIA_ACTION_MUTE:
+			//return mediaActions.doMute(true);
+			updateStatus("MEDIA_ACTION_MUTE");
+			break;
+		case MEDIA_ACTION_UNMUTE:
+			//return mediaActions.doMute(false);
+			updateStatus("MEDIA_ACTION_UNMUTE");
+			break;
+		case MEDIA_ACTION_MUTE_TOGGLE:
+			//return mediaActions.doMute(!isMuted(_volumeController));
+			updateStatus("MEDIA_ACTION_MUTE_TOGGLE");
+			break;
+		case MEDIA_ACTION_PLAYPAUSE_TOGGLE:
+		{
+			updateStatus("MEDIA_ACTION_PLAYPAUSE_TOGGLE");
+			
+			if (isPlaying())
+			{
+				//actionRunnable = new MediaAction(MEDIA_ACTION_PAUSE, source, context, MediaPlayerDemo.this);               
+				return doStop();
+			}
+			else 
+			{
+				//actionRunnable = new MediaAction(MEDIA_ACTION_PLAY, source, context, MediaPlayerDemo.this);
+				updateTitleBarTitle("バッファ中...");
+				return doPlay();
+			}
+		}
+		// case MEDIA_ACTION_CHANGE_TRACK:
+		case MEDIA_ACTION_NEXT_TRACK:
+			break;
+		case MEDIA_ACTION_PAUSE:
+			break;
+		case MEDIA_ACTION_PLAY:
+		{
+			updateStatus("MEDIA_ACTION_PLAY");
+			updateTitleBarTitle("バッファ中...");
+			return doPlay();
+		}
+		case MEDIA_ACTION_PREV_TRACK:
+			break;
+		case MEDIA_ACTION_STOP:
+		{
+			updateStatus("MEDIA_ACTION_STOP");	
+			return doStop();
+		}
+		default:
+			//actionRunnable = null;
+			updateStatus("default");
+			break;
+		}
+		
+		return false;
+	} // mediaAction()
+	
 
-    // Invoked PlayerListener
+	// Invoked PlayerListener
 	public void playerUpdate(Player player, String event, Object eventData)
 	{
 		if(player != _player)
 			return;
-
+		
 		if( event.equals("error") )
 		{
 			updateStatus("[PL] " + event);
@@ -188,7 +187,7 @@ public class MediaActions implements MediaActionHandler, PlayerListener
 	
 	private boolean doPlay() //throws Exception
 	{
-		updateStatus("doPlay()");		
+		updateStatus("doPlay()");
 		
 		isOperating = true;
 		
@@ -203,8 +202,8 @@ public class MediaActions implements MediaActionHandler, PlayerListener
 				try {
 					_rtmp = new RTMP(station);
 					_player = Manager.createPlayer(_rtmp);
-										
-					//updateStatus("[Realize]");		
+					
+					//updateStatus("[Realize]");
 					_player.realize();
 					//updateStatus("[Realized]");
 					
@@ -215,11 +214,11 @@ public class MediaActions implements MediaActionHandler, PlayerListener
 					
 					//updateStatus("[Start]");
 					_player.start();
-					//updateStatus("[Started]");					
-
+					//updateStatus("[Started]");
+					
 					// スクリーンのタイトルを更新
 					updateTitleBarTitle(null);
-										
+					
 				} catch (MediaException e) {
 					//updateStatus("doPlay() " + e.toString());
 					updateTitleBarTitle("再生失敗(M)");
@@ -232,7 +231,7 @@ public class MediaActions implements MediaActionHandler, PlayerListener
 			}
 		}.start();
 		
-		return true;		
+		return true;
 	}
 	
 	
@@ -253,7 +252,6 @@ public class MediaActions implements MediaActionHandler, PlayerListener
 			if(_rtmp != null)
 				_rtmp = null;
 			
-
 			// スクリーンのタイトルを更新
 			updateTitleBarTitle(null);
 			
@@ -275,17 +273,17 @@ public class MediaActions implements MediaActionHandler, PlayerListener
 		
 		//updateStatus("doVolumeUp()" + Integer.toString(newVolume));
 		
-        if (volumeCtrl.getLevel() == newVolume) 
-        {
-        	currentVolume = newVolume;
-            return false;
-        }
-        volumeCtrl.setLevel(newVolume);
-        currentVolume = newVolume;
-        
-        _app.getMainScreen().popupVolumeVal(currentVolume);
-        
-        return true;
+		if (volumeCtrl.getLevel() == newVolume) 
+		{
+			currentVolume = newVolume;
+			return false;
+		}
+		volumeCtrl.setLevel(newVolume);
+		currentVolume = newVolume;
+		
+		_app.getMainScreen().popupVolumeVal(currentVolume);
+		
+		return true;
 	}
 	
 	private boolean doVolumeDown()
@@ -294,20 +292,20 @@ public class MediaActions implements MediaActionHandler, PlayerListener
 		final int newVolume = Math.max(volumeCtrl.getLevel() - 5, 00);
 		
 		//updateStatus("doVolumeUp()" + Integer.toString(newVolume));
-						        
-        if (volumeCtrl.getLevel() == newVolume) 
-        {
-        	currentVolume = newVolume;
-            return false;
-        }
-        
-        volumeCtrl.setLevel(newVolume);
-        currentVolume = newVolume;
-        
-        
-        _app.getMainScreen().popupVolumeVal(currentVolume);
-        
-        return true;
+		
+		if (volumeCtrl.getLevel() == newVolume) 
+		{
+			currentVolume = newVolume;
+			return false;
+		}
+		
+		volumeCtrl.setLevel(newVolume);
+		currentVolume = newVolume;
+		
+		
+		_app.getMainScreen().popupVolumeVal(currentVolume);
+		
+		return true;
 	}
 	
 	private void AddPlayerListener(Player _player)
@@ -320,43 +318,43 @@ public class MediaActions implements MediaActionHandler, PlayerListener
 		_app.getMainScreen().updateTitleBarTitle(val);
 	}
 	
-	public boolean isOperating() 
-    {
-    	return isOperating;
-    }
+	public boolean isOperating()
+	{
+		return isOperating;
+}
 	
-    public boolean isPlaying() 
-    {
-    	return _player != null && _player.getState() == Player.STARTED;
-    }
+	public boolean isPlaying() 
+	{
+		return _player != null && _player.getState() == Player.STARTED;
+	}
 	
-    
-    public void SetAudioPath()
-    {
-    	AudioPathControl _audioPathCtrl = (AudioPathControl) _player.getControl("net.rim.device.api.media.control.AudioPathControl");
-    	
+	
+	public void SetAudioPath()
+	{
+		AudioPathControl _audioPathCtrl = (AudioPathControl) _player.getControl("net.rim.device.api.media.control.AudioPathControl");
+		
 		if(_audioPathCtrl == null)
 			return;
-    	
-    	try	{
-    		
-	    	if(_audioPathCtrl.getAudioPath() != net.rim.device.api.media.control.AudioPathControl.AUDIO_PATH_HANDSET)
-	    	{    		    		
-				_audioPathCtrl.setAudioPath(net.rim.device.api.media.control.AudioPathControl.AUDIO_PATH_HANDSET);			
-	    	}
-	    	else
-	    	{    	
-	    		_audioPathCtrl.setAudioPath(net.rim.device.api.media.control.AudioPathControl.AUDIO_PATH_HANDSFREE);
-	    	}
-    	} catch (IllegalArgumentException e) {
+		
+		try {
+			
+			if(_audioPathCtrl.getAudioPath() != net.rim.device.api.media.control.AudioPathControl.AUDIO_PATH_HANDSET)
+			{
+				_audioPathCtrl.setAudioPath(net.rim.device.api.media.control.AudioPathControl.AUDIO_PATH_HANDSET);
+			}
+			else
+			{
+				_audioPathCtrl.setAudioPath(net.rim.device.api.media.control.AudioPathControl.AUDIO_PATH_HANDSFREE);
+			}
+		} catch (IllegalArgumentException e) {
 		} catch (MediaException e) {
 		}
 		
-    }
-    
+	}
+	
 	public void updateStatus(String val)
 	{
-		synchronized (UiApplication.getEventLock()) 
+		synchronized (UiApplication.getEventLock())
 		{
 			_app.updateStatus("[MA] " + val);
 		}
