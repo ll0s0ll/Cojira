@@ -75,7 +75,7 @@ import net.rim.device.api.ui.menu.DefaultContextMenuProvider;
 import net.rim.device.api.util.StringProvider;
 
 
-public class StationsScreen2 extends MainScreen
+public class MyScreen extends MainScreen
 {
 	private MyApp _app;
 	private Runnable _onCloseRunnable;
@@ -101,7 +101,7 @@ public class StationsScreen2 extends MainScreen
 	private boolean isMenuOpened = false;
 	
 	
-	public StationsScreen2()
+	public MyScreen()
 	{
 		super(Manager.NO_VERTICAL_SCROLL);
 		
