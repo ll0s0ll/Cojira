@@ -55,14 +55,14 @@ public class ProgInfoScreen extends MainScreen
 		_app = (MyApp) UiApplication.getUiApplication();
 		
 		//---- タイトルバーを作成
-        _titleBar = new StandardTitleBar() ;
-    	_titleBar.addSignalIndicator();
-    	_titleBar.addNotifications();
-    	_titleBar.addClock();
-    	_titleBar.setPropertyValue(StandardTitleBar.PROPERTY_BATTERY_VISIBILITY, StandardTitleBar.BATTERY_VISIBLE_ALWAYS);
-    	setTitleBar(_titleBar);		
+		_titleBar = new StandardTitleBar() ;
+		_titleBar.addSignalIndicator();
+		_titleBar.addNotifications();
+		_titleBar.addClock();
+		_titleBar.setPropertyValue(StandardTitleBar.PROPERTY_BATTERY_VISIBILITY, StandardTitleBar.BATTERY_VISIBLE_ALWAYS);
+		setTitleBar(_titleBar);
 		
-    	// STYLE
+		// STYLE
 		String style = "body{font-size: " + (Font.getDefault().getHeight(Ui.UNITS_px) - 2) + "px;}";
 		style = style + "dd {margin-left: 0; font-size: " + (Font.getDefault().getHeight(Ui.UNITS_px) - 5) + "px;}";
 		
@@ -101,25 +101,25 @@ public class ProgInfoScreen extends MainScreen
 		// See..
 		// BrowserField - open links in actual browser? - BlackBerry Support Community Forums
 		// http://supportforums.blackberry.com/t5/Java-Development/BrowserField-open-links-in-actual-browser/m-p/468721
-		ProtocolController hybridController = new ProtocolController(_browserField);      
-		hybridController.setNavigationRequestHandler("http", new BrowserFieldNavigationRequestHandler() {                 
+		ProtocolController hybridController = new ProtocolController(_browserField);
+		hybridController.setNavigationRequestHandler("http", new BrowserFieldNavigationRequestHandler() {
 			public void handleNavigation(BrowserFieldRequest request)
-	        {
+			{
 				BrowserSession browser = Browser.getDefaultSession();
-				browser.displayPage(request.getURL());                   
-	        }
+				browser.displayPage(request.getURL());
+			}
 		});
-		hybridController.setNavigationRequestHandler("https", new BrowserFieldNavigationRequestHandler() {                 
-            public void handleNavigation(BrowserFieldRequest request)
-            {
-               BrowserSession browser = Browser.getDefaultSession();
-               browser.displayPage(request.getURL());                   
-            }
+		hybridController.setNavigationRequestHandler("https", new BrowserFieldNavigationRequestHandler() {
+			public void handleNavigation(BrowserFieldRequest request)
+			{
+				BrowserSession browser = Browser.getDefaultSession();
+				browser.displayPage(request.getURL());
+			}
 		});
-	    _browserField.getConfig().setProperty(BrowserFieldConfig.CONTROLLER, hybridController);
+		_browserField.getConfig().setProperty(BrowserFieldConfig.CONTROLLER, hybridController);
 		
-		add(_browserField); 
-
+		add(_browserField);
+		
 		// BrowserField Encoding problem - BlackBerry Support Community Forums
 		// http://supportforums.blackberry.com/t5/Java-Development/BrowserField-Encoding-problem/td-p/1428779
 		try {
@@ -130,10 +130,10 @@ public class ProgInfoScreen extends MainScreen
 	} //ProgramInfoScreen()
 	
 	private void updateStatus(final String message)
-    {
-    	synchronized (UiApplication.getEventLock()) 
-		{			
+	{
+		synchronized (UiApplication.getEventLock()) 
+		{
 			_app.updateStatus("[PIS] " + message);
 		}
-    } //updateStatus()
+	} //updateStatus()
 }
