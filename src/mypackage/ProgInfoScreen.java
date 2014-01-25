@@ -54,8 +54,8 @@ public class ProgInfoScreen extends MainScreen
 	{
 		_app = (MyApp) UiApplication.getUiApplication();
 		
-		//---- タイトルバーを作成
-		_titleBar = new StandardTitleBar() ;
+		//---- タイトルバーを作成 ---- //
+		_titleBar = new StandardTitleBar();
 		_titleBar.addSignalIndicator();
 		_titleBar.addNotifications();
 		_titleBar.addClock();
