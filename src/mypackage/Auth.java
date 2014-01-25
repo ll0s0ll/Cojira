@@ -110,91 +110,91 @@ public class Auth
 		}
 		
 		/*
-	    FileConnection fconn = (FileConnection)Connector.open("file:///SDCard/authkey.png");
-	    //updateStatus("OK I'm " + fconn.getName() + " " + fconn.fileSize() );
-	    if (!fconn.exists())
-	    	throw new Exception("Not Found authkey.png");        
-	    
-	    InputStream fconnIS =  fconn.openInputStream();
-	    fconn.close();        
-	    */
-	    
-	    //---- Get Authkey --------------------------------------------- //
-	    getAuthKey();
-	    
-	    //---- Get PartialKey --------------------------------------------- //
-	    InputStream fconnIS = new ByteArrayInputStream(authkey);
-	    
-	    byte[] b1 = new byte[ keylength ];
-	    
-	    fconnIS.skip(keyoffset);
-	    fconnIS.read(b1, 0, keylength);
-	    fconnIS.close();
-	    authkey = null;
-	    partialkey = new String( Base64OutputStream.encode(b1, 0, b1.length, false, false) );
+		FileConnection fconn = (FileConnection)Connector.open("file:///SDCard/authkey.png");
+		//updateStatus("OK I'm " + fconn.getName() + " " + fconn.fileSize() );
+		if (!fconn.exists())
+			throw new Exception("Not Found authkey.png");
+		InputStream fconnIS =  fconn.openInputStream();
+		fconn.close();
+		*/
+
+		//---- Get Authkey --------------------------------------------- //
+		getAuthKey();
 		
-	    
+		//---- Get PartialKey --------------------------------------------- //
+		InputStream fconnIS = new ByteArrayInputStream(authkey);
+		
+		byte[] b1 = new byte[ keylength ];
+		
+		fconnIS.skip(keyoffset);
+		fconnIS.read(b1, 0, keylength);
+		fconnIS.close();
+		authkey = null;
+		
+		partialkey = new String( Base64OutputStream.encode(b1, 0, b1.length, false, false) );
+		
+		
 		//---- Get AreaID --------------------------------------------- //
-	    try {
-	    	_app.getMainScreen().updateStatusField("エリア判定中...");
-	    	ConnectionDescriptor conDescriptor = _app.getConnectionFactory().getConnection( url2 );
-	    	
-	    	if (conDescriptor == null)
-	    		throw new Exception("conDescriptor ERROR");
-	    	
-	    	// using the connection
-	    	auth2Con = (HttpsConnection) conDescriptor.getConnection();
-	    	
-	    	// Set the request method and headers
-	    	auth2Con.setRequestMethod(HttpsConnection.POST);
-	    	auth2Con.setRequestProperty("pragma", "no-cache");
-	    	auth2Con.setRequestProperty("X-Radiko-App", "pc_1");
-	    	auth2Con.setRequestProperty("X-Radiko-App-Version", "2.0.1");
-	    	auth2Con.setRequestProperty("X-Radiko-Authtoken", authToken);
-	    	auth2Con.setRequestProperty("X-Radiko-Partialkey", partialkey);
-	    	
-	    	int rc = auth2Con.getResponseCode();
-	    	if (rc != HttpsConnection.HTTP_OK)
-	    		throw new IOException("HTTP response code: " + rc);
-	    	
-	    	// レスポンスを解析してエリアIDを取得
-	    	LineReader lineReader = new LineReader(auth2Con.openDataInputStream());
-	    	for(;;)
-	    	{
-	    		try {
-	    			String line = new String(lineReader.readLine());
-	    			if(line.length() != 0)
-	    			{
-	    				// エリア内の場合は'JP'から、エリア外の場合は'OUT'から始まる
-	    				if(line.startsWith("OUT"))
-	    				{
-	    					throw new Exception("Out of Area");
-	    				}
-	    				else if(line.startsWith("JP"))
-	    				{
-	    					int comma;
-	    					if((comma = line.indexOf(",")) == -1)
-	    						throw new Exception("Failed to get the AreaID (Not found 'comma')");
-	    					
-	    					areaID = line.substring(0, comma);
-	    					
-	    					updateStatus("Area_ID: " + areaID);
-	    				}
-	    				else
-	    				{
-	    					throw new Exception("Failed to get the AreaID (Not found 'JP')");
-	    				}
-	    			}
-	    		}
-	    		catch(EOFException eof)
-	    		{
-	    			break;
-	    		}
-	    	} //for
-	    	
-	    } finally {
-	    	if(auth2Con != null){ auth2Con.close(); }
-	    }
+		try {
+			_app.getMainScreen().updateStatusField("エリア判定中...");
+			ConnectionDescriptor conDescriptor = _app.getConnectionFactory().getConnection( url2 );
+			
+			if (conDescriptor == null)
+				throw new Exception("conDescriptor ERROR");
+			
+			// using the connection
+			auth2Con = (HttpsConnection) conDescriptor.getConnection();
+			
+			// Set the request method and headers
+			auth2Con.setRequestMethod(HttpsConnection.POST);
+			auth2Con.setRequestProperty("pragma", "no-cache");
+			auth2Con.setRequestProperty("X-Radiko-App", "pc_1");
+			auth2Con.setRequestProperty("X-Radiko-App-Version", "2.0.1");
+			auth2Con.setRequestProperty("X-Radiko-Authtoken", authToken);
+			auth2Con.setRequestProperty("X-Radiko-Partialkey", partialkey);
+			
+			int rc = auth2Con.getResponseCode();
+			if (rc != HttpsConnection.HTTP_OK)
+				throw new IOException("HTTP response code: " + rc);
+		
+			// レスポンスを解析してエリアIDを取得
+			LineReader lineReader = new LineReader(auth2Con.openDataInputStream());
+			for(;;)
+			{
+				try {
+					String line = new String(lineReader.readLine());
+					if(line.length() != 0)
+					{
+						// エリア内の場合は'JP'から、エリア外の場合は'OUT'から始まる
+						if(line.startsWith("OUT"))
+						{
+							throw new Exception("Out of Area");
+						}
+						else if(line.startsWith("JP"))
+						{
+							int comma;
+							if((comma = line.indexOf(",")) == -1)
+								throw new Exception("Failed to get the AreaID (Not found 'comma')");
+
+							areaID = line.substring(0, comma);
+
+							updateStatus("Area_ID: " + areaID);
+						}
+						else
+						{
+							throw new Exception("Failed to get the AreaID (Not found 'JP')");
+						}
+					}
+				}
+				catch(EOFException eof)
+				{
+					break;
+				}
+			} //for
+
+		} finally {
+			if(auth2Con != null){ auth2Con.close(); }
+		}
 	} //doAuth
 
 	
@@ -238,13 +238,13 @@ public class Auth
 		
 		try {
 			httpconn.setRequestMethod(HttpConnection.GET);
-		    
-		    int rc = httpconn.getResponseCode();
-		    if (rc != HttpConnection.HTTP_OK)        
-		        throw new IOException("getAuthKey() HTTP response code: " + rc);      
-		    
-		    parseSWF(httpconn.openInputStream());
-		    
+		
+			int rc = httpconn.getResponseCode();
+			if (rc != HttpConnection.HTTP_OK)
+				throw new IOException("getAuthKey() HTTP response code: " + rc);
+		
+			parseSWF(httpconn.openInputStream());
+		
 		} finally {
 			if(httpconn != null){ httpconn.close(); }
 		}
