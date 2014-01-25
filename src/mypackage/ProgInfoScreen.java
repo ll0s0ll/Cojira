@@ -16,7 +16,7 @@
 	GNU General Public License for more details.
 	
 	You should have received a copy of the GNU General Public License
-    along with Cojira.  If not, see <http://www.gnu.org/licenses/>.
+	along with Cojira.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 package mypackage;
@@ -24,31 +24,18 @@ package mypackage;
 import java.io.UnsupportedEncodingException;
 import java.util.Hashtable;
 
-import org.w3c.dom.Document;
-
-import mypackage.MyScreen.DialogCommandHandler;
 import net.rim.blackberry.api.browser.Browser;
 import net.rim.blackberry.api.browser.BrowserSession;
-import net.rim.device.api.browser.field.ContentReadEvent;
 import net.rim.device.api.browser.field2.BrowserField;
 import net.rim.device.api.browser.field2.BrowserFieldConfig;
 import net.rim.device.api.browser.field2.BrowserFieldNavigationRequestHandler;
 import net.rim.device.api.browser.field2.BrowserFieldRequest;
 import net.rim.device.api.browser.field2.ProtocolController;
-import net.rim.device.api.command.Command;
-import net.rim.device.api.command.CommandHandler;
-import net.rim.device.api.command.ReadOnlyCommandMetadata;
-import net.rim.device.api.script.ScriptEngine;
 import net.rim.device.api.ui.Font;
-import net.rim.device.api.ui.MenuItem;
 import net.rim.device.api.ui.Ui;
 import net.rim.device.api.ui.UiApplication;
-import net.rim.device.api.ui.component.ActiveRichTextField;
-import net.rim.device.api.ui.component.Dialog;
-import net.rim.device.api.ui.component.Menu;
 import net.rim.device.api.ui.component.StandardTitleBar;
 import net.rim.device.api.ui.container.MainScreen;
-import net.rim.device.api.util.StringProvider;
 
 
 public class ProgInfoScreen extends MainScreen
@@ -67,20 +54,13 @@ public class ProgInfoScreen extends MainScreen
 	{
 		_app = (MyApp) UiApplication.getUiApplication();
 		
-		
 		//---- タイトルバーを作成
         _titleBar = new StandardTitleBar() ;
     	_titleBar.addSignalIndicator();
     	_titleBar.addNotifications();
     	_titleBar.addClock();
     	_titleBar.setPropertyValue(StandardTitleBar.PROPERTY_BATTERY_VISIBILITY, StandardTitleBar.BATTERY_VISIBLE_ALWAYS);
-    	setTitleBar(_titleBar);
- 
-		
-		//Hashtable station = (Hashtable) _app._epg.GetStationsInfoV().elementAt(rowNumber_with_focus);
-		//Hashtable prog = (Hashtable) station.get(val);
-		
-		//Font.getDefault().getHeight(Ui.UNITS_px);
+    	setTitleBar(_titleBar);		
 		
     	// STYLE
 		String style = "body{font-size: " + (Font.getDefault().getHeight(Ui.UNITS_px) - 2) + "px;}";
@@ -111,19 +91,11 @@ public class ProgInfoScreen extends MainScreen
 			body = body + "<p>" + (String)prog.get("info") + "</p>";
 		}
 		
-		String str = "<html><head><style type=\"text/css\">" + style + "</style></head><body>" + body + "</body>" + "</html>";
-		
-		//ActiveRichTextField _artf = new ActiveRichTextField(str);
-		//add(_artf);
+		String str = "<html><head><style type=\"text/css\">" + style + "</style></head><body>" + body + "</body>" + "</html>";		
 		
 		// BrowserField Sample Code - Using the BrowserFieldC... - BlackBerry Support Community Forums
-		// http://supportforums.blackberry.com/t5/Java-Development/BrowserField-Sample-Code-Using-the-BrowserFieldConfig-class/ta-p/495716
-		BrowserFieldConfig _config = new BrowserFieldConfig();
-		//_config.setProperty(BrowserFieldConfig.INITIAL_SCALE, new Float(2.0));
-		_config.setProperty(BrowserFieldConfig.VIEWPORT_WIDTH, new Integer(getWidth() / 2 ));
-		//_config.setProperty(BrowserFieldConfig.VIEWPORT_WIDTH, new Integer(480));
-		//_config.setProperty(BrowserFieldConfig.NAVIGATION_MODE, BrowserFieldConfig.NAVIGATION_MODE_POINTER);
-		_browserField = new BrowserField(_config);
+		// http://supportforums.blackberry.com/t5/Java-Development/BrowserField-Sample-Code-Using-the-BrowserFieldConfig-class/ta-p/495716		
+		_browserField = new BrowserField();
 		
 		// Use the default (full-featured) browser to view external http content
 		// See..
@@ -156,28 +128,6 @@ public class ProgInfoScreen extends MainScreen
 		}
 		
 	} //ProgramInfoScreen()
-	
-	protected void makeMenu( Menu menu, int instance )
-    {   
-        MenuItem _prog = new MenuItem(new StringProvider("選局"), 0x00020000, 0);
-        _prog.setCommand(new Command(        
-	        new CommandHandler()
-	        {
-	        	public void execute(ReadOnlyCommandMetadata metadata, Object context)
-	            {
-	        		//Dialog.inform("NAV_MODE: " + _browserField.getConfig().getProperty(BrowserFieldConfig.NAVIGATION_MODE)); //.equals(BrowserFieldConfig.NAVIGATION_MODE_POINTER);
-	        		
-	        		_browserField.getConfig().setProperty(BrowserFieldConfig.NAVIGATION_MODE, BrowserFieldConfig.NAVIGATION_MODE_POINTER);
-	        		
-	        		//_browserField.getConfig().setProperty(key, value);
-	            }        	
-	        }
-        ));
-        
-        menu.add(_prog);        
-        
-        super.makeMenu(menu, instance);
-    };
 	
 	private void updateStatus(final String message)
     {

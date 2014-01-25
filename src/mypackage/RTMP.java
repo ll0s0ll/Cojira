@@ -135,7 +135,7 @@ public class RTMP extends DataSource
 		super(locator);
 		_app = (MyApp) UiApplication.getUiApplication();
 		authkey = _app._auth.getAuthToken();
-		_factory = _app.GetConnectionFactory();
+		_factory = _app.getConnectionFactory();
 	}
 	
 	

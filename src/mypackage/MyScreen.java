@@ -115,7 +115,7 @@ public class MyScreen extends MainScreen
     	_titleBar.setPropertyValue(StandardTitleBar.PROPERTY_BATTERY_VISIBILITY, StandardTitleBar.BATTERY_VISIBLE_ALWAYS);
     	setTitleBar(_titleBar);
         
-    	//---- テーブルを作成
+    	//---- テーブルを作成 --------------------------------------------- //
     	// Table
         _tableModel = new TableModel();
     	    	
@@ -171,12 +171,12 @@ public class MyScreen extends MainScreen
         
         add(_tableView);
     	
-        //---- ログ表示用フィールド
+        //---- ログ表示用フィールド --------------------------------------------- //
         _statusField = new BasicEditField(Field.NON_FOCUSABLE);
         _tab1Manager = new VerticalFieldManager(Manager.VERTICAL_SCROLL);
         _tab1Manager.add(_statusField);
     	
-        //---- 音量表示用フィールド
+        //---- 音量表示用フィールド --------------------------------------------- //
         _gaugeField = new GaugeField(null, 0, 100, 0, GaugeField.NO_TEXT)
 		{
 			protected void layout(int width, int height)

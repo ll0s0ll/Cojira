@@ -16,7 +16,7 @@
 	GNU General Public License for more details.
 	
 	You should have received a copy of the GNU General Public License
-    along with Cojira.  If not, see <http://www.gnu.org/licenses/>.
+	along with Cojira.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 package mypackage;
@@ -30,11 +30,6 @@ import java.util.Vector;
 
 import javax.microedition.io.HttpConnection;
 
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NamedNodeMap;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -45,7 +40,6 @@ import net.rim.device.api.io.transport.ConnectionFactory;
 import net.rim.device.api.system.Bitmap;
 import net.rim.device.api.ui.UiApplication;
 import net.rim.device.api.xml.jaxp.SAXParserImpl;
-import net.rim.device.api.xml.parsers.DocumentBuilderFactory;
 
 
 public final class EPG
@@ -55,7 +49,6 @@ public final class EPG
 	private String areaID;
 	private String areaName;
 	private Vector stationsInfoV;
-	private Hashtable programInfo;
 	private int currentStation;
 	
 	
@@ -64,6 +57,48 @@ public final class EPG
 		_app = (MyApp) app;
 	}
 	
+	public String getAreaID()
+	{
+		return areaID;
+	}
+	
+	public String getAreaName()
+	{
+		return areaName;
+	}
+	
+	public int GetCurrentStation()
+	{
+		//return (String) ((Hashtable)stationsInfoV.elementAt(currentStation)).get("id");
+		return currentStation;
+	}
+	
+	public String GetCurrentStationID()
+	{
+		return (String) ((Hashtable)stationsInfoV.elementAt(currentStation)).get("id");
+		//return currentStation;
+	}
+	
+	public String getCurrentStationName()
+	{
+		return (String) ((Hashtable)stationsInfoV.elementAt(currentStation)).get("name");
+	}
+	
+	public void getProgramInfo() throws Exception
+	{
+		if((areaID = _app._auth.getCurrentAreaID()) == null)
+			throw new Exception("AreaID Error");
+		
+		String url = "http://radiko.jp//v2/api/program/now?area_id=" + areaID;
+		ProgramParserHandler _handler = new ProgramParserHandler();
+		
+		getAndParseXML(url, _handler);
+	} //getProgramInfo()
+	
+	public Vector GetStationsInfoV()
+	{		
+		return stationsInfoV;
+	}
 	
 	public void getStationList() throws Exception
 	{
@@ -84,350 +119,47 @@ public final class EPG
 			//ï˙ëóã«ÇÃÉçÉSâÊëúÇéÊìæ
 			getStationsLogo();
 			
-			/*
-	    	ConnectionDescriptor conDescriptor = _connfactory.getConnection( url );
-	
-	    	if (conDescriptor == null)
-	    		throw new Exception("conDescriptor ERROR");    		
-	
-	    	// using the connection
-	    	httpconn = (HttpConnection) conDescriptor.getConnection();   	
-	    	
-	        // Set the request method and headers
-	    	httpconn.setRequestMethod(HttpConnection.GET);
-	        
-	        // Getting the response code will open the connection,
-	        // send the request, and read the HTTP response headers.
-	        // The headers are stored until requested.
-	        int rc = httpconn.getResponseCode();
-	        if (rc != HttpConnection.HTTP_OK)        
-	            throw new IOException("HTTP response code: " + rc);                
-	        
-	        Document doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(httpconn.openInputStream());            
-	        
-	        
-	        Element rootElement = doc.getDocumentElement();
-            rootElement.normalize();
-            
-            *//*
-            NodeList stations = rootElement.getElementsByTagName("station");             
-            for(int i=0; i<stations.getLength(); i++ )
-	        {
-	        	Node station = stations.item(i);
-	        	Hashtable ht = null;
-    			NamedNodeMap namdNodeMap = station.getAttributes();    			
-    			for(int k=0; k<namdNodeMap.getLength(); k++)
-    			{	        				
-    				updateStatus(" Att: " + namdNodeMap.item(k).getNodeName() + " val: " + namdNodeMap.item(k).getNodeValue());
-    				if(namdNodeMap.item(k).getNodeValue().equals("INT"))
-    				{
-    					// Display the root node and all its descendant nodes, which covers the entire
-    		            // document.
-    		            displayNode( station, 0 );
-    				}
-    			}
-	        }
-            *//*
-            
-            // éÊìæÇµÇΩÉGÉäÉAÇÃï˙ëóã«ÇéÊìæ
-            NodeList stations = rootElement.getElementsByTagName("station");
-            //stationsInfoV = new Vector();
-            for(int i=0; i<stations.getLength(); i++ )
-	        {
-            	Node station = stations.item(i);
-            	//stationsInfo[i] = new Hashtable();
-	            //StoreNode( station, stationsInfo[i] );
-            	Hashtable htt = new Hashtable();
-            	StoreNode(station, htt);
-				stationsInfoV.addElement(htt);
-	        }
-            */
-            
-            
-            
-            
-            /*
-	        NodeList nodeList = rootElement.getElementsByTagName("stations");
-	        if(nodeList == null)
-	        	throw new Exception("nodeList is null");
-	        
-	        //Node[] stations = new Node[nodeList.getLength()];	        
-	        //Hashtable _stations = new Hashtable();
-	        
-	        for(int i=0; i<nodeList.getLength(); i++ )
-	        {
-	        	Node station = nodeList.item(i);
-	        		        	
-	        	//updateStatus("Tag: " + station.getNodeName());
-	        	
-	        	NodeList tmpNL = station.getChildNodes();
-	        	for(int j=0; j<tmpNL.getLength(); j++)
-	        	{
-	        		Node tmpN = tmpNL.item(j);	        		
-	        		updateStatus(" Tag: " + tmpN.getNodeName());
-	        		
-	        		if(tmpN.getNodeName().equals("station"))
-	        		{
-	        			NamedNodeMap namdNodeMap = tmpN.getAttributes();
-	        			
-	        			for(int k=0; k<namdNodeMap.getLength(); k++)
-	        			{	        				
-	        				updateStatus(" Att: " + namdNodeMap.item(k).getNodeName() + " val: " + namdNodeMap.item(k).getNodeValue());
-	        			}
-	        			
-	        		}
-	        	}
-	        	
-	        	
-	        	*//*
-	        	Hashtable _station = new Hashtable();
-	        	
-	        	Node station = nodeList.item(i);
-	        	NodeList tmpNL = station.getChildNodes();
-	        	for(int j=0; j<tmpNL.getLength(); j++)
-	        	{
-	        		Node tmpN = tmpNL.item(j);
-	        		_station.put(tmpN.getNodeName(), tmpN.getNodeValue());
-	        		
-	        		updateStatus("Tag: " + tmpN.getNodeName() + " Value: " + tmpN.getNodeValue());
-	        	}
-	        	
-	        	
-	        	//stationN.getChildNodes()
-	        	//updateStatus("Station: " + station.getTextContent());
-	        	 
-	        	 *//*
-	        }
-	        */	        	        
-	
 		} finally {
 			if(httpconn != null){ httpconn.close(); }
 	    }
-	}
-	
-	/*
-	 private void StoreNode( Node node, Hashtable ht ) 
-	 { 
-		 
-		 
-		 if( node.getNodeType() == Node.ELEMENT_NODE ) 
-		 {
-			 NodeList childNodes = node.getChildNodes();
-			 int numChildren = childNodes.getLength();
-			 Node firstChild = childNodes.item( 0 );
-			 
-			 if ( numChildren == 1 && firstChild.getNodeType() == Node.TEXT_NODE )
-			 {				
-				 //htt.put(node.getNodeName(), firstChild.getNodeValue());				 
-				 ht.put(node.getNodeName(), firstChild.getNodeValue());
-				 //updateStatus("NAME:" + node.getNodeName() + " Value:" +  firstChild.getNodeValue() );
-			 } 
-			 else 
-			 {
-				 // The node either has > 1 children, or it has at least one Element node child. 
-				 // Either way, its children have to be visited.  Print the name of the element
-				 // and recurse.
-				 //updateStatus("NAME2:" + node.getNodeName());							
-				 
-				 // Recursively visit all this node's children.
-				 for ( int i = 0; i < numChildren; ++i ) 
-				 {
-					 StoreNode( childNodes.item( i ), ht );
-				 }
-			 }
-		 }
-	 }
-	
-	*/
-	 /*
-	 public void GetProgramInfo() throws Exception
-	 {
-		 HttpConnection httpconn = null;
-		 
-		 try {
-			 updateStatus("Connecting..(EPG INFO)");	    	
-			
-			 MyApp _app = (MyApp) UiApplication.getUiApplication();
-			 if((areaID = _app._auth.getAreaID()) == null)
-				 throw new Exception("AreaID Error");
-							
-			 //String url = "http://radiko.jp/v2/station/list/" + areaID + ".xml";
-			 String url = "http://radiko.jp//v2/api/program/now?area_id=" + areaID;
-			 ConnectionDescriptor conDescriptor = _connfactory.getConnection( url );
-			
-			 if (conDescriptor == null)
-				 throw new Exception("conDescriptor ERROR");    		
-			
-			 // using the connection
-			 httpconn = (HttpConnection) conDescriptor.getConnection();   	
-				
-			 // Set the request method and headers
-			 httpconn.setRequestMethod(HttpConnection.GET);
-			    
-			 // Getting the response code will open the connection,
-			 // send the request, and read the HTTP response headers.
-			 // The headers are stored until requested.
-			 int rc = httpconn.getResponseCode();
-			 if (rc != HttpConnection.HTTP_OK)        
-				 throw new IOException("HTTP response code: " + rc);                
-			    
-			 Document doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(httpconn.openInputStream());            
-			        
-			 Element rootElement = doc.getDocumentElement();
-			 rootElement.normalize();
-			 
-			 // åªç›ï˙ëóíÜÇÃî‘ëgÇÃèÓïÒÇéÊìæ
-			 programInfo = new Hashtable();
-			 NodeList stations = rootElement.getElementsByTagName("station");             
-			 for(int i=0; i<stations.getLength(); i++ )
-			 {
-				 Node station = stations.item(i);
-				 //updateStatus("[ITEM] " + station.getNodeName() + " / " + station.getNodeValue());
-				 
-				 Hashtable htt = new Hashtable();
-				 StoreNode(station, htt);
-				 //updateStatus("[PI] " + htt.toString());
-				 //displayNode(station, 0);				 
-				 
-				 NamedNodeMap namdNodeMap = station.getAttributes();  
-				 if(namdNodeMap != null)
-				 {
-					 for(int k=0; k<namdNodeMap.getLength(); k++)
-					 {	        				
-						 //updateStatus(" Att: " + namdNodeMap.item(k).getNodeName() + " val: " + namdNodeMap.item(k).getNodeValue());
-						 
-						 if(namdNodeMap.item(k).getNodeName().equals("id"))
-						 {
-							 programInfo.put(namdNodeMap.item(k).getNodeValue(), htt);
-						 }		
-					 }
-				 }
-				 
-				 //_app._secondaryScreen.setProgressBarVal((i * 100)/ stations.getLength());
-			 }
-			    
-			 //Vector stationsInfoV = _app._epg.GetStationsInfoV();
-			 for(Enumeration e = stationsInfoV.elements(); e.hasMoreElements(); )
-			 {
-				 Hashtable station = (Hashtable) e.nextElement();				 
-				 Hashtable tbs = (Hashtable) programInfo.get(station.get("id"));	
-					
-				 //updateStatus("[ENU [" + tbs.toString());
-				 station.put("PGInfo_title", tbs.get("title") == null ? " " : tbs.get("title"));
-				 station.put("PGInfo_pfm", tbs.get("pfm")== null ? " " : tbs.get("pfm"));
-				 
-				 
-				 //updateStatus("[ENU [" + station.get("id") + "] " + tbs.get("name"));
-				 //updateStatus("[ENU [" + station.get("id") + "] " + tbs.get("title"));
-				 //updateStatus("[ENU [" + station.get("id") + "] " + tbs.get("pfm"));
-				 
-			 }	
-			 
-			 *//*
-			 for(Enumeration e = programInfo.keys(); e.hasMoreElements();)
-			 {
-				  updateStatus("[ENU] " + e.nextElement().toString());
-			 }
-			 *//*
-			
-			 	        	        
-			
-			} finally {
-				if(httpconn != null){ httpconn.close(); }
-			}
-	 } //GetProgramInfo
-	 */
-	 
-	 public void getProgramInfo() throws Exception
-	 {
-		 if((areaID = _app._auth.getCurrentAreaID()) == null)
-			 throw new Exception("AreaID Error");
-		 
-		 String url = "http://radiko.jp//v2/api/program/now?area_id=" + areaID;
-		 
-		 ProgramParserHandler _handler = new ProgramParserHandler();
-		 
-		 getAndParseXML(url, _handler);
-	 }
-	 
-	 
-	 private void getAndParseXML(String url, DefaultHandler handler) throws Exception
-	 {
-		 SAXParserImpl saxparser = new SAXParserImpl();
-		 //ListParser receivedListHandler = new ListParser();
-		 HttpConnection httpconn = null;
-		 
-		 try {
-			 updateStatus("Connecting..(EPG INFO SAX)");	    	
-	
-			 ConnectionDescriptor conDescriptor = _app.GetConnectionFactory().getConnection( url );
-			
-			 if (conDescriptor == null)
-				 throw new Exception("conDescriptor ERROR");    		
-			
-			 // using the connection
-			 httpconn = (HttpConnection) conDescriptor.getConnection();   	
-				
-			 // Set the request method and headers
-			 httpconn.setRequestMethod(HttpConnection.GET);
-			    
-			 // Getting the response code will open the connection,
-			 // send the request, and read the HTTP response headers.
-			 // The headers are stored until requested.
-			 int rc = httpconn.getResponseCode();
-			 if (rc != HttpConnection.HTTP_OK)        
-				 throw new IOException("SAX HTTP response code: " + rc);
-			 
-			 saxparser.parse(httpconn.openDataInputStream(), handler);
-			 //saxparser.parse(url, handler, false);
-			 
-		 } finally {
-			 if(httpconn != null){ httpconn.close(); }
-		 }
-	 }
-	 
-	 
-	 
-	 
-	
-	    
-	
-	public Vector GetStationsInfoV()
-	{		
-		return stationsInfoV;
-	}
+	} //getStationList()
 	
 	public void SetCurrentStation(int val)
 	{
 		currentStation = val;
 	}
 	
-	public int GetCurrentStation()
+	private void getAndParseXML(String url, DefaultHandler handler) throws Exception
 	{
-		//return (String) ((Hashtable)stationsInfoV.elementAt(currentStation)).get("id");
-		return currentStation;
-	}
+		SAXParserImpl saxparser = new SAXParserImpl();
+		//ListParser receivedListHandler = new ListParser();
+		HttpConnection httpconn = null;
+		 
+		try {
+			//updateStatus("Connecting..(EPG INFO SAX)");	    	
 	
-	public String GetCurrentStationID()
-	{
-		return (String) ((Hashtable)stationsInfoV.elementAt(currentStation)).get("id");
-		//return currentStation;
-	}
-	
-	public String getCurrentStationName()
-	{
-		return (String) ((Hashtable)stationsInfoV.elementAt(currentStation)).get("name");
-	}
-	
-	public String getAreaID()
-	{
-		return areaID;
-	}
-	
-	public String getAreaName()
-	{
-		return areaName;
-	}
+			ConnectionDescriptor conDescriptor = _app.getConnectionFactory().getConnection( url );
+			
+			if (conDescriptor == null)
+				throw new Exception("conDescriptor ERROR");    		
+			
+			// using the connection
+			httpconn = (HttpConnection) conDescriptor.getConnection();   	
+				
+			// Set the request method and headers
+			httpconn.setRequestMethod(HttpConnection.GET);
+
+			int rc = httpconn.getResponseCode();
+			if (rc != HttpConnection.HTTP_OK)        
+				throw new IOException("SAX HTTP response code: " + rc);
+			 
+			saxparser.parse(httpconn.openDataInputStream(), handler);
+			//saxparser.parse(url, handler, false);
+			 
+		} finally {
+			if(httpconn != null){ httpconn.close(); }
+		}
+	} //getAndParseXML()
 	
 	private void getStationsLogo() throws Exception
 	{
@@ -437,11 +169,9 @@ public final class EPG
 		for(Enumeration e = stationsInfoV.elements(); e.hasMoreElements(); )
         {
         	Hashtable station = (Hashtable) e.nextElement();
-        	//updateStatus("Vec3: " + station.get("id").toString());
         	
         	// LOGO
         	Bitmap bitmap = GetWebBitmap((String) station.get("logo_medium"));
-        	//Bitmap bitmap = GetWebBitmap((String) station.get("logo_large"));
         	
         	station.put("station_logo",	bitmap);
         }		
@@ -452,7 +182,7 @@ public final class EPG
     	InputStream is;
     	byte[] imageData;
     	
-    	ConnectionFactory _factory = _app.GetConnectionFactory();
+    	ConnectionFactory _factory = _app.getConnectionFactory();
     	if(_factory == null)
     		throw new IOException("[bitmap] _factory Error");
     	
@@ -494,7 +224,6 @@ public final class EPG
 		}
 	}
 	
-	
 	private class StationParserHandler extends DefaultHandler 
 	{
 		private Stack stack = new Stack();
@@ -509,7 +238,6 @@ public final class EPG
 			{
 				areaName = attributes.getValue("area_name");
 			}
-			
 			
 			if(qname.equals("station"))
 			{
@@ -548,22 +276,11 @@ public final class EPG
 		private int num = 0;
 		private boolean isFirstProgtag;
 		
-		/*
+
 		public ProgramParserHandler()
 		{
 			// DO NOTHING
-		}
-		
-		public void startDocument() throws SAXException 
-		{
-			//DO NOTHING
-		}
-	 
-		public void endDocument() throws SAXException 
-		{ 
-			//DO NOTHING
-		} 
-	 	*/
+		}		
 		
 		public void startElement(String uri, String localName, String qname, Attributes attributes) throws SAXException 
 		{
@@ -577,10 +294,6 @@ public final class EPG
 		 
 			if(qname.equals("prog"))
 			{
-				//updateStatus("startElement() " + qname);				
-				//updateStatus("ftl: " + attributes.getValue("ftl"));
-				//updateStatus("tol: " + attributes.getValue("tol"));
-			 
 				ht = null;
 				ht = new Hashtable();
 	                  

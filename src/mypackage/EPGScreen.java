@@ -16,7 +16,7 @@
 	GNU General Public License for more details.
 	
 	You should have received a copy of the GNU General Public License
-    along with Cojira.  If not, see <http://www.gnu.org/licenses/>.
+	along with Cojira.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 package mypackage;
@@ -49,7 +49,6 @@ import net.rim.device.api.ui.UiApplication;
 import net.rim.device.api.ui.UiEngineInstance;
 import net.rim.device.api.ui.XYEdges;
 import net.rim.device.api.ui.XYRect;
-import net.rim.device.api.ui.component.Dialog;
 import net.rim.device.api.ui.component.LabelField;
 import net.rim.device.api.ui.component.StandardTitleBar;
 import net.rim.device.api.ui.component.progressindicator.ActivityIndicatorController;
@@ -85,9 +84,7 @@ public class EPGScreen extends MainScreen
 		
 		_app = (MyApp) UiApplication.getUiApplication();
 		stationInfo = (Hashtable) _app._epg.GetStationsInfoV().elementAt(rowNumberWithFocus);
-				
 		
-		//setTitle("ç°ì˙ÇÃî‘ëgï\ (" + stationInfo.get("name") + ")");
 		StandardTitleBar _titleBar = new StandardTitleBar() ;
     	_titleBar.addSignalIndicator();
     	_titleBar.addNotifications();
@@ -98,10 +95,6 @@ public class EPGScreen extends MainScreen
 		// TABLE
 		_tableModel = new TableModel();    	
         _tableView = new TableView(_tableModel);
-
-    	//setContextMenuProvider(new DefaultContextMenuProvider());
-        //ItemProvider itemProvider = new ItemProvider();
-        //_tableView.setCommandItemProvider(itemProvider);
         
         // See.. http://www.w3schools.com/html/html_colornames.asp
         //_tableView.setDataTemplateFocus(BackgroundFactory.createLinearGradientBackground(0xEFF7FA, 0xEFF7FA, Color.LIGHTBLUE, Color.LIGHTBLUE));
@@ -117,15 +110,7 @@ public class EPGScreen extends MainScreen
         {
             
              public void execute(ReadOnlyCommandMetadata metadata, Object context) 
-             {
-                 // Display selected device in a pop up dialog                
-                 //Object[] objArray = (Object[])_tableModel.getRow(_tableView.getRowNumberWithFocus()); 
-                 
-                 //MyApp _app = (MyApp) UiApplication.getUiApplication();
-                 //_app._epg.SetCurrentStation((String)((Hashtable)stationsInfoV.elementAt(_tableView.getRowNumberWithFocus())).get("id"));
-                 
-            	 
-            	 
+             { 
                  //---- For ProgInfoScreen ----//
              	 //ProgInfoScreen _progInfoScreen = new ProgInfoScreen(ProgInfoScreen.NEXT, _tableView.getRowNumberWithFocus());
              	 ProgInfoScreen _progInfoScreen = new ProgInfoScreen((Hashtable)progs.elementAt(_tableView.getRowNumberWithFocus()));
@@ -145,14 +130,6 @@ public class EPGScreen extends MainScreen
                  engine.setTransition(_progInfoScreen, null, UiEngineInstance.TRIGGER_POP, transOUT);
                  
                  _app.pushScreen(_progInfoScreen);
-                 
-                 
-                 
-                 //Dialog dialog = new Dialog(Dialog.D_OK, (String)objArray[0] + _tableView.getRowNumberWithFocus(), 0, null, 0); 
-                 //Dialog dialog = new Dialog(Dialog.D_OK, "CurrentStation:" + _app._epg.GetCurrentStation(), 0, null, 0);
-            	 //Dialog dialog = new Dialog(Dialog.D_OK, "Push " + _tableView.getRowNumberWithFocus(), 0, null, 0); 
-                 //dialog.doModal();
-                 
              }
          }));
         
@@ -211,19 +188,7 @@ public class EPGScreen extends MainScreen
             		}
             	};
             	fields[3] = descinfo;
-            	/*
-            	// PROGRAM PFM
-            	LabelField pfm = new LabelField(data[4], Field.NON_FOCUSABLE | LabelField.ELLIPSIS)
-            	{
-            		protected void paint(Graphics g)
-            		{
-            		      g.setColor(Color.GRAY); //here you can add any colors. either color codes (like - 0x0511a0a) or like this- Color.RED
-            		      super.paint(g);
-            		}            		
-            	};
-            	pfm.setFont(font);
-            	fields[4] = pfm;
-            	*/
+            	
                 return fields;
             }
         };  
@@ -272,19 +237,8 @@ public class EPGScreen extends MainScreen
                 RegionStyles.ALIGN_LEFT, 
                 RegionStyles.ALIGN_MIDDLE);
         dataTemplate.createRegion(new XYRect(0, 3, 1, 1), prog_name);
-        dataTemplate.setRowProperties(3, new TemplateRowProperties(Font.getDefault().getHeight() + prog_name.getPadding().bottom));        
-        /*
-        // Program PFM
-        RegionStyles prog_pfm = new RegionStyles(
-        		BorderFactory.createSimpleBorder(new XYEdges(0, 0, 0, 0), Border.STYLE_SOLID), 
-        		Font.getDefault().derive(Font.PLAIN, (Font.getDefault().getHeight(Ui.UNITS_pt) - 1), Ui.UNITS_pt),
-                null,
-                new XYEdges(0, 10, 5, 10),
-                RegionStyles.ALIGN_LEFT, 
-                RegionStyles.ALIGN_MIDDLE);
-        dataTemplate.createRegion(new XYRect(1, 3, 1, 1), prog_pfm);
-        dataTemplate.setRowProperties(3, new TemplateRowProperties(Font.getDefault().getHeight() + prog_pfm.getPadding().bottom));
-        */
+        dataTemplate.setRowProperties(3, new TemplateRowProperties(Font.getDefault().getHeight() + prog_name.getPadding().bottom));
+        
         // Set Left column width
         dataTemplate.setColumnProperties(0, new TemplateColumnProperties(Display.getWidth() - _tableView.getMarginLeft() - _tableView.getMarginRight()));
         
@@ -296,44 +250,11 @@ public class EPGScreen extends MainScreen
         dataTemplate.useFixedHeight(true);    
         
         add(_tableView);
-        
-        /*
-        for(int i=0; i<1; i++)
-        {
-        	//Hashtable station = (Hashtable) e.nextElement();
-        	//updateStatus("Vec2: " + station.get("id").toString());
-        	
-            // StationName
-            String pgname = "name";
-            
-            // ProgramInfo
-            String pgtime = "time";
-            String pgPfm  = "pfm";
-            
-        	// Add data to the TableModel            
-            _tableModel.addRow(new Object[]{pgname, pgtime, pgPfm});
-        }
-        */
-        
 	} //EPGScreen()
 	
 	protected void onUiEngineAttached(boolean attached)
     {
 		getProgramInfo();
-    }
-	
-	private void updateStatus(final String message)
-    {
-    	synchronized (UiApplication.getEventLock()) 
-		{			
-			_app.updateStatus("[EPGS] " + message);
-		}
-    }
-	
-	private void removeField()
-    {
-    	//this.delete(_labelField);
-    	this.setStatus(null);
     }
 	
 	private void getAndParseXML() throws Exception
@@ -345,7 +266,7 @@ public class EPGScreen extends MainScreen
 		try {
 			updateStatus("Connecting..(EPG Screen SAX)");	    	
 	
-			ConnectionDescriptor conDescriptor = _app.GetConnectionFactory().getConnection( url );
+			ConnectionDescriptor conDescriptor = _app.getConnectionFactory().getConnection( url );
 			
 			if (conDescriptor == null)
 				throw new Exception("conDescriptor ERROR");    		
@@ -355,10 +276,7 @@ public class EPGScreen extends MainScreen
 				
 			// Set the request method and headers
 			httpconn.setRequestMethod(HttpConnection.GET);
-			    
-			// Getting the response code will open the connection,
-			// send the request, and read the HTTP response headers.
-			// The headers are stored until requested.
+			
 			int rc = httpconn.getResponseCode();
 			if (rc != HttpConnection.HTTP_OK)        
 				throw new IOException("SAX HTTP response code: " + rc);
@@ -372,7 +290,7 @@ public class EPGScreen extends MainScreen
 		}
 	}
 	
-	public void getProgramInfo()
+	private void getProgramInfo()
     {
     	// ActivityIndicator ST
 		ActivityIndicatorView _aiView = new ActivityIndicatorView(Field.USE_ALL_WIDTH);
@@ -396,8 +314,19 @@ public class EPGScreen extends MainScreen
     	PGInfoThread _th = new PGInfoThread();
         _th.start();
     }
-    
-    
+	
+	private void updateStatus(final String message)
+    {
+    	synchronized (UiApplication.getEventLock()) 
+		{			
+			_app.updateStatus("[EPGS] " + message);
+		}
+    }
+	
+	private void removeField()
+    {
+    	this.setStatus(null);
+    }
     
     private class PGInfoThread extends Thread
     { 
@@ -464,9 +393,6 @@ public class EPGScreen extends MainScreen
 		 
 			if(qname.equals("prog"))
 			{
-				//updateStatus("startElement() " + qname);				
-				//updateStatus("ftl: " + attributes.getValue("ftl"));
-				//updateStatus("tol: " + attributes.getValue("tol"));
 				if(isSelectedStation)
 				{
 					ht = null;
@@ -557,7 +483,6 @@ public class EPGScreen extends MainScreen
 					ht.put("url", element);
 				}
 			}
-			
 		} //characters()
 	 } //ProgramParserHandler
 }

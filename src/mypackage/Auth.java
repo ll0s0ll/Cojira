@@ -66,10 +66,10 @@ public class Auth
 	    String partialkey;
 	    int keylength, keyoffset;
 	    
-		//---- Get AuthToken,keylength,keyoffset
+		//---- Get AuthToken,keylength,keyoffset --------------------- //
 	    try {	
 	    	_app.getMainScreen().updateStatusField("接続中...");
-	    	ConnectionDescriptor conDescriptor = _app.GetConnectionFactory().getConnection( url );
+	    	ConnectionDescriptor conDescriptor = _app.getConnectionFactory().getConnection( url );
 	
 	    	if (conDescriptor == null)
 	    		throw new Exception("conDescriptor Error");
@@ -87,8 +87,8 @@ public class Auth
 			}
 			
 			auth1Con = (HttpsConnection) conDescriptor.getConnection();
-		    	
-	        // Set the request method and headers
+			
+			// Set the request method and headers
 			auth1Con.setRequestMethod(HttpsConnection.POST);
 			auth1Con.setRequestProperty("pragma", "no-cache");
 			auth1Con.setRequestProperty("X-Radiko-App", "pc_1");
@@ -120,11 +120,10 @@ public class Auth
 	    fconn.close();        
 	    */
 	    
-
-		//---- Get Authkey
-		getAuthKey();
-		
-		//---- Get PartialKey
+	    //---- Get Authkey --------------------------------------------- //
+	    getAuthKey();
+	    
+	    //---- Get PartialKey --------------------------------------------- //
 	    InputStream fconnIS = new ByteArrayInputStream(authkey);
 	    
 	    byte[] b1 = new byte[ keylength ];
@@ -136,10 +135,10 @@ public class Auth
 	    partialkey = new String( Base64OutputStream.encode(b1, 0, b1.length, false, false) );
 		
 	    
-		//---- Get AreaID
-		try {
-			_app.getMainScreen().updateStatusField("エリア判定中...");
-	    	ConnectionDescriptor conDescriptor = _app.GetConnectionFactory().getConnection( url2 );
+		//---- Get AreaID --------------------------------------------- //
+	    try {
+	    	_app.getMainScreen().updateStatusField("エリア判定中...");
+	    	ConnectionDescriptor conDescriptor = _app.getConnectionFactory().getConnection( url2 );
 	
 	    	if (conDescriptor == null)
 	    		throw new Exception("conDescriptor ERROR");    		
@@ -224,40 +223,28 @@ public class Auth
 	
 	private void getAuthKey() throws Exception
 	{
-    	String url = "http://radiko.jp/player/swf/player_3.0.0.01.swf";
-    	
-    	ConnectionFactory _factory = _app.GetConnectionFactory();
-    	if(_factory == null)
-    		throw new IOException("getAuthKey() _factory Error");
-    	
-    	// Get swf file
-    	ConnectionDescriptor conDescriptor = _factory.getConnection(url);
-    	if(conDescriptor == null)
-    		throw new IOException("getAuthKey() conDescriptor Error");
-    	
-    	HttpConnection httpconn = (HttpConnection) conDescriptor.getConnection();
-    	
-    	try {
-	    	httpconn.setRequestMethod(HttpConnection.GET);
-	        
-	        int rc = httpconn.getResponseCode();
-	        if (rc != HttpConnection.HTTP_OK)        
-	            throw new IOException("getAuthKey() HTTP response code: " + rc);      
-	        
-	        parseSWF(httpconn.openInputStream());
-		       
-	        /*
-	        InputStream is = httpconn.openInputStream();
-	        
-	        if((swf_rawData = IOUtilities.streamToBytes(is)) == null)
-	        	throw new IOException("getAuthKey() imageData Error");
-	        
-	       updateStatus("length: " + swf_rawData.length);
-	        
-	       byte[] check = new byte[10];
-	       System.arraycopy(swf_rawData, 0, check, 0, check.length);
-	       updateStatus("byte: " + ByteArrayUtilities.byteArrayToHex(check));
-	       */
+		String url = "http://radiko.jp/player/swf/player_3.0.0.01.swf";
+		
+		ConnectionFactory _factory = _app.getConnectionFactory();
+		if(_factory == null)
+			throw new IOException("getAuthKey() _factory Error");
+		
+		// Get swf file
+		ConnectionDescriptor conDescriptor = _factory.getConnection(url);
+		if(conDescriptor == null)
+			throw new IOException("getAuthKey() conDescriptor Error");
+		
+		HttpConnection httpconn = (HttpConnection) conDescriptor.getConnection();
+		
+		try {
+			httpconn.setRequestMethod(HttpConnection.GET);
+		    
+		    int rc = httpconn.getResponseCode();
+		    if (rc != HttpConnection.HTTP_OK)        
+		        throw new IOException("getAuthKey() HTTP response code: " + rc);      
+		    
+		    parseSWF(httpconn.openInputStream());
+		    
 		} finally {
 			if(httpconn != null){ httpconn.close(); }
 		}
@@ -350,10 +337,6 @@ public class Auth
 				tagLength = tagCodeAndLength[0] & 0x3F;
 			else
 				tagLength = decodeInt32(readbytesFromStream(_zlibIS, 4));
-						
-			//updateStatus("TagCodeAndLength: " + ByteArrayUtilities.byteArrayToHex(tagCodeAndLength));
-			//updateStatus("tagCode: " + tagCode + " tagLength: " + tagLength);
-			
 			
 			// CodeがDefineBinaryData(Tag type 0x57)の場合のみ処理
 			if(tagCode == 0x57)
@@ -386,25 +369,7 @@ public class Auth
 			
 			if(tagCode == 0)
 				break;
-		}
-		/*
-		byte[] data = new byte[512];
-	    totalReadNum = 0;
-		while(totalReadNum < data.length)
-		{
-			int readNum = 0;
-			if((readNum = zlibInputStream.read( data, totalReadNum, data.length - totalReadNum)) == -1)
-				throw new Exception("Failed to read data");     	
-			totalReadNum += readNum; 
-		}
-	    
-	    
-		//byte[] check = new byte[10];
-		//System.arraycopy(data, 0, check, 0, check.length);
-		updateStatus("data: " + data.length);
-		updateStatus("data: " + ByteArrayUtilities.byteArrayToHex(data));
-	    */
-		
+		}		
 	}  //parseSWF()
 	
 	private byte[] readbytesFromStream(InputStream is, int length) throws Exception 

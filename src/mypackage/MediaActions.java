@@ -74,7 +74,6 @@ public class MediaActions implements MediaActionHandler, PlayerListener
     {
     	doStop();
     	
-		
     	// Reset AudioPath
 		AudioPathControl _audioPathCtrl = (AudioPathControl) _player.getControl("net.rim.device.api.media.control.AudioPathControl");
 		try {
@@ -83,9 +82,7 @@ public class MediaActions implements MediaActionHandler, PlayerListener
 		} catch (IllegalArgumentException e1) {
 		}
 		
-    	
-    	
-        UiApplication app = _app;
+		UiApplication app = _app;
         _app = null;
         if ( app != null )
         {
@@ -286,7 +283,7 @@ public class MediaActions implements MediaActionHandler, PlayerListener
         volumeCtrl.setLevel(newVolume);
         currentVolume = newVolume;
         
-        _app._secondaryScreen2.popupVolumeVal(currentVolume);
+        _app.getMainScreen().popupVolumeVal(currentVolume);
         
         return true;
 	}
@@ -308,7 +305,7 @@ public class MediaActions implements MediaActionHandler, PlayerListener
         currentVolume = newVolume;
         
         
-        _app._secondaryScreen2.popupVolumeVal(currentVolume);
+        _app.getMainScreen().popupVolumeVal(currentVolume);
         
         return true;
 	}
@@ -320,7 +317,7 @@ public class MediaActions implements MediaActionHandler, PlayerListener
 	
 	private void updateTitleBarTitle(String val)
 	{
-		_app._secondaryScreen2.updateTitleBarTitle(val);
+		_app.getMainScreen().updateTitleBarTitle(val);
 	}
 	
 	public boolean isOperating() 
