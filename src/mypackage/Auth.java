@@ -59,21 +59,21 @@ public class Auth
 	{
 		HttpsConnection auth1Con = null;
 		HttpsConnection auth2Con = null;
-	    //String url = "https://radiko.jp/v2/api/auth1_fms;deviceside=false;connectionUID=GPMDSAP01";
-	    //String url2 = "https://radiko.jp/v2/api/auth2_fms;deviceside=false;connectionUID=GPMDSAP01";
+		//String url = "https://radiko.jp/v2/api/auth1_fms;deviceside=false;connectionUID=GPMDSAP01";
+		//String url2 = "https://radiko.jp/v2/api/auth2_fms;deviceside=false;connectionUID=GPMDSAP01";
 		String url = "https://radiko.jp/v2/api/auth1_fms";
-	    String url2 = "https://radiko.jp/v2/api/auth2_fms";
-	    String partialkey;
-	    int keylength, keyoffset;
-	    
+		String url2 = "https://radiko.jp/v2/api/auth2_fms";
+		String partialkey;
+		int keylength, keyoffset;
+		
 		//---- Get AuthToken,keylength,keyoffset --------------------- //
-	    try {	
-	    	_app.getMainScreen().updateStatusField("接続中...");
-	    	ConnectionDescriptor conDescriptor = _app.getConnectionFactory().getConnection( url );
-	
-	    	if (conDescriptor == null)
-	    		throw new Exception("conDescriptor Error");
-	    	
+		try {
+			_app.getMainScreen().updateStatusField("接続中...");
+			ConnectionDescriptor conDescriptor = _app.getConnectionFactory().getConnection( url );
+			
+			if (conDescriptor == null)
+				throw new Exception("conDescriptor Error");
+			
 			// connection succeeded
 			int transportUsed = conDescriptor.getTransportDescriptor().getTransportType();
 			switch(transportUsed)
@@ -83,7 +83,7 @@ public class Auth
 					break;
 				case TransportInfo.TRANSPORT_TCP_WIFI:
 					updateStatus("Connecting via WIFI");
-					break;				
+					break;
 			}
 			
 			auth1Con = (HttpsConnection) conDescriptor.getConnection();
@@ -95,20 +95,19 @@ public class Auth
 			auth1Con.setRequestProperty("X-Radiko-App-Version", "2.0.1");
 			auth1Con.setRequestProperty("X-Radiko-User", "test-stream");
 			auth1Con.setRequestProperty("X-Radiko-Device", "pc");
-	        
-	        int rc = auth1Con.getResponseCode();
-	        if (rc != HttpsConnection.HTTP_OK)
-	            throw new Exception("HTTP response code: " + rc);
-	        
-	        authToken = auth1Con.getHeaderField("X-RADIKO-AUTHTOKEN");
-	        keylength = Integer.parseInt(auth1Con.getHeaderField("X-Radiko-KeyLength"));
-	        keyoffset = Integer.parseInt(auth1Con.getHeaderField("X-Radiko-KeyOffset"));
-	        
-	        //updateStatus("AuthToken: " + authToken + "\n KeyLength: " + Integer.toString(keylength) + "\n KeyOffset: " + keyoffset);
-	
+			
+			int rc = auth1Con.getResponseCode();
+			if (rc != HttpsConnection.HTTP_OK)
+				throw new Exception("HTTP response code: " + rc);
+			
+			authToken = auth1Con.getHeaderField("X-RADIKO-AUTHTOKEN");
+			keylength = Integer.parseInt(auth1Con.getHeaderField("X-Radiko-KeyLength"));
+			keyoffset = Integer.parseInt(auth1Con.getHeaderField("X-Radiko-KeyOffset"));
+			
+			//updateStatus("AuthToken: " + authToken + "\n KeyLength: " + Integer.toString(keylength) + "\n KeyOffset: " + keyoffset);
 		} finally {
 			if(auth1Con != null){ auth1Con.close(); }
-	    }
+		}
 		
 		/*
 	    FileConnection fconn = (FileConnection)Connector.open("file:///SDCard/authkey.png");
@@ -139,61 +138,62 @@ public class Auth
 	    try {
 	    	_app.getMainScreen().updateStatusField("エリア判定中...");
 	    	ConnectionDescriptor conDescriptor = _app.getConnectionFactory().getConnection( url2 );
-	
-	    	if (conDescriptor == null)
-	    		throw new Exception("conDescriptor ERROR");    		
-	
-	    	// using the connection
-	    	auth2Con = (HttpsConnection) conDescriptor.getConnection();   	
 	    	
-	        // Set the request method and headers
+	    	if (conDescriptor == null)
+	    		throw new Exception("conDescriptor ERROR");
+	    	
+	    	// using the connection
+	    	auth2Con = (HttpsConnection) conDescriptor.getConnection();
+	    	
+	    	// Set the request method and headers
 	    	auth2Con.setRequestMethod(HttpsConnection.POST);
 	    	auth2Con.setRequestProperty("pragma", "no-cache");
 	    	auth2Con.setRequestProperty("X-Radiko-App", "pc_1");
 	    	auth2Con.setRequestProperty("X-Radiko-App-Version", "2.0.1");
 	    	auth2Con.setRequestProperty("X-Radiko-Authtoken", authToken);
 	    	auth2Con.setRequestProperty("X-Radiko-Partialkey", partialkey);
-	        
-	        int rc = auth2Con.getResponseCode();
-	        if (rc != HttpsConnection.HTTP_OK)        
-	            throw new IOException("HTTP response code: " + rc);                
-	        
-	        LineReader lineReader = new LineReader(auth2Con.openDataInputStream());
-	        for(;;)
-	        {
-	        	try
-	            {
-	        		String line = new String(lineReader.readLine());
-	        		if(line.length() != 0)
-	                {
-	        			if(line.startsWith("OUT"))
-	        			{
-	        				throw new Exception("Out of Area");
-	        			}
-	        			else if(line.startsWith("JP"))
-	        			{
-	        				int comma;
-	        				if((comma = line.indexOf(",")) == -1)
-	        					throw new Exception("Failed to get the AreaID (Not found 'comma')");
-	        				
-	        				areaID = line.substring(0, comma);
-	        				
-	        				updateStatus("Area_ID: " + areaID);
-	        			}
-	        			else
-	        			{
-	        				throw new Exception("Failed to get the AreaID (Not found 'JP')");
-	        			}
-	                }     
-	            }
-	            catch(EOFException eof)
-	            {
-	                break;
-	            }
-	        } //for
-	
-		} finally {
-			if(auth2Con != null){ auth2Con.close(); }
+	    	
+	    	int rc = auth2Con.getResponseCode();
+	    	if (rc != HttpsConnection.HTTP_OK)
+	    		throw new IOException("HTTP response code: " + rc);
+	    	
+	    	// レスポンスを解析してエリアIDを取得
+	    	LineReader lineReader = new LineReader(auth2Con.openDataInputStream());
+	    	for(;;)
+	    	{
+	    		try {
+	    			String line = new String(lineReader.readLine());
+	    			if(line.length() != 0)
+	    			{
+	    				// エリア内の場合は'JP'から、エリア外の場合は'OUT'から始まる
+	    				if(line.startsWith("OUT"))
+	    				{
+	    					throw new Exception("Out of Area");
+	    				}
+	    				else if(line.startsWith("JP"))
+	    				{
+	    					int comma;
+	    					if((comma = line.indexOf(",")) == -1)
+	    						throw new Exception("Failed to get the AreaID (Not found 'comma')");
+	    					
+	    					areaID = line.substring(0, comma);
+	    					
+	    					updateStatus("Area_ID: " + areaID);
+	    				}
+	    				else
+	    				{
+	    					throw new Exception("Failed to get the AreaID (Not found 'JP')");
+	    				}
+	    			}
+	    		}
+	    		catch(EOFException eof)
+	    		{
+	    			break;
+	    		}
+	    	} //for
+	    	
+	    } finally {
+	    	if(auth2Con != null){ auth2Con.close(); }
 	    }
 	} //doAuth
 
