@@ -49,12 +49,11 @@ public class ProgInfoScreen extends MainScreen
 	private BrowserField _browserField;
 	
 	
-	//public ProgInfoScreen(String val, int rowNumber_with_focus)
 	public ProgInfoScreen(Hashtable prog)
 	{
 		_app = (MyApp) UiApplication.getUiApplication();
 		
-		//---- タイトルバーを作成 ---- //
+		//---- タイトルバーを作成
 		_titleBar = new StandardTitleBar();
 		_titleBar.addSignalIndicator();
 		_titleBar.addNotifications();
