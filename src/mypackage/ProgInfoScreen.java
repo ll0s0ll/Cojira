@@ -1,7 +1,7 @@
 /*
 	ProgInfoScreen.java
 	
-	Copyright (C) 2014  Shun ITO
+	Copyright (C) 2014  Shun ITO <movingentity@gmail.com>
 	
 	This file is part of Cojira.
 
