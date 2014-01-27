@@ -85,6 +85,7 @@ public class EPGScreen extends MainScreen
 		_app = (MyApp) UiApplication.getUiApplication();
 		stationInfo = (Hashtable) _app._epg.GetStationsInfoV().elementAt(rowNumberWithFocus);
 		
+		// タイトルバーを作成
 		StandardTitleBar _titleBar = new StandardTitleBar();
 		_titleBar.addSignalIndicator();
 		_titleBar.addNotifications();
@@ -104,8 +105,36 @@ public class EPGScreen extends MainScreen
 		_controller = new TableController(_tableModel, _tableView, TableController.ROW_FOCUS);
 
 		_tableView.setController(_controller);
-
-
+		
+		// For OS6
+		_controller.setCommand(new CommandHandler() 
+		{
+			
+			public void execute(ReadOnlyCommandMetadata metadata, Object context)
+			{
+				//---- For ProgInfoScreen ----//
+				//ProgInfoScreen _progInfoScreen = new ProgInfoScreen(ProgInfoScreen.NEXT, _tableView.getRowNumberWithFocus());
+				ProgInfoScreen _progInfoScreen = new ProgInfoScreen((Hashtable)progs.elementAt(_tableView.getRowNumberWithFocus()));
+				
+				// FADE IN
+				TransitionContext transIN = new TransitionContext(TransitionContext.TRANSITION_FADE);
+				transIN.setIntAttribute(TransitionContext.ATTR_DURATION, 100);
+				
+				UiEngineInstance engine = Ui.getUiEngineInstance();
+				engine.setTransition(null, _progInfoScreen, UiEngineInstance.TRIGGER_PUSH, transIN);
+				
+				// FADE OUT
+				TransitionContext transOUT = new TransitionContext(TransitionContext.TRANSITION_FADE);
+				transOUT.setIntAttribute(TransitionContext.ATTR_DURATION, 100);
+				transOUT.setIntAttribute(TransitionContext.ATTR_KIND, TransitionContext.KIND_OUT);
+				
+				engine.setTransition(_progInfoScreen, null, UiEngineInstance.TRIGGER_POP, transOUT);
+				
+				_app.pushScreen(_progInfoScreen);
+			}
+		}, null, null);
+		/*
+		// For OS7 later
 		_controller.setCommand(new Command(new CommandHandler() 
 		{
 			
@@ -132,7 +161,7 @@ public class EPGScreen extends MainScreen
 				_app.pushScreen(_progInfoScreen);
 			}
 		}));
-		
+		*/
 		
 		DataTemplate dataTemplate = new DataTemplate(_tableView, 4, 1)
 		{
