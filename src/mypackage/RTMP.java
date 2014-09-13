@@ -2330,8 +2330,12 @@ public class RTMP extends DataSource
 		public void connect() throws IOException
 		{
 			updateStatus("connect()");			
-						
-			String domain = "w-radiko.smartstream.ne.jp";
+			
+			// 2014/09/12‚Ü‚Å
+			//String domain = "w-radiko.smartstream.ne.jp";
+			
+			// 2014/9/13‚©‚ç
+			String domain = "f-radiko.smartstream.ne.jp";
 			
 			try {
 				Handshake(domain);
