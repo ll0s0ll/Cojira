@@ -25,6 +25,7 @@ import java.io.ByteArrayInputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Hashtable;
 
 import javax.microedition.io.HttpConnection;
 import javax.microedition.io.HttpsConnection;
@@ -32,9 +33,7 @@ import javax.microedition.io.HttpsConnection;
 import net.rim.device.api.compress.ZLibInputStream;
 import net.rim.device.api.io.Base64OutputStream;
 import net.rim.device.api.io.LineReader;
-import net.rim.device.api.io.transport.ConnectionDescriptor;
 import net.rim.device.api.io.transport.ConnectionFactory;
-import net.rim.device.api.io.transport.TransportInfo;
 import net.rim.device.api.ui.UiApplication;
 import net.rim.device.api.util.Arrays;
 
@@ -43,121 +42,76 @@ public class Auth
 {
 	private MyApp _app;
 	
-	private byte[] authkey;
-	private String authToken;
-	private String areaID;
-	
 	
 	public Auth(UiApplication app)
 	{
 		_app = (MyApp) app;
-		authkey = null;
 	}
 	
 	
 	public void doAuth() throws Exception
 	{
-		HttpsConnection auth1Con = null;
+		ConnectionFactory _connfactory = _app.getConnectionFactory();
+		
+		// Get AuthToken, Keylength, Keyoffset
+		Hashtable tmp = getAuthtokenAndKeylengthAndKeyoffset(_connfactory);
+		String authToken = ((String)tmp.get("authToken"));
+		int keylength = Integer.parseInt((String)tmp.get("keylength"));
+		int keyoffset = Integer.parseInt((String)tmp.get("keyoffset"));
+		tmp.clear();
+		tmp = null;
+		
+		// Get Authkey
+		byte[] authkey = getAuthKey(_connfactory);
+		
+		// Get PartialKey
+		String partialkey = getPartialkey(authkey, keylength, keyoffset);
+		
+		// Get AreaID
+		String areaID = getAreaID(_connfactory, authToken, partialkey);
+		
+		// Store
+		_app.setAuthToken(authToken);
+		_app.setAreaID(areaID);
+		
+		updateStatus("Area_ID: " + areaID);
+		
+	} //doAuth()
+	
+	
+	private String getAreaID(ConnectionFactory _connfactory, String authToken, String partialkey) throws IOException, Exception
+	{
+		_app.getMainScreen().updateStatusField("ê⁄ë±íÜ... (4/4)");
+		
+		// à¯êîÉ`ÉFÉbÉN
+		if(_connfactory == null) { throw new NullPointerException(); }
+		if(authToken == null) { throw new NullPointerException(); }
+		if(authToken.length() == 0) { throw new IllegalArgumentException(); }
+		if(partialkey == null) { throw new NullPointerException(); }
+		if(partialkey.length() == 0) { throw new IllegalArgumentException(); }
+		
+		
+		// óLå¯Ç»í êMåoòHÇ™Ç†ÇÈÇ©ämîF
+		if(!MyApp.isCoverageSufficient()) { throw new IOException("OutCoverage"); }
+		
+		final String url = "https://radiko.jp/v2/api/auth2_fms";
+		//final String url = "https://radiko.jp/v2/api/auth2_fms;deviceside=false;connectionUID=GPMDSAP01";
+		
+		//
+		Hashtable property = new Hashtable();
+		property.put("pragma", "no-cache");
+		property.put("X-Radiko-App", "pc_1");
+		property.put("X-Radiko-App-Version", "2.0.1");
+		property.put("X-Radiko-Authtoken", authToken);
+		property.put("X-Radiko-Partialkey", partialkey);
+		
 		HttpsConnection auth2Con = null;
-		//String url = "https://radiko.jp/v2/api/auth1_fms;deviceside=false;connectionUID=GPMDSAP01";
-		//String url2 = "https://radiko.jp/v2/api/auth2_fms;deviceside=false;connectionUID=GPMDSAP01";
-		String url = "https://radiko.jp/v2/api/auth1_fms";
-		String url2 = "https://radiko.jp/v2/api/auth2_fms";
-		String partialkey;
-		int keylength, keyoffset;
 		
-		//---- Get AuthToken,keylength,keyoffset --------------------- //
 		try {
-			_app.getMainScreen().updateStatusField("Êé•Á∂ö‰∏≠...");
-			ConnectionDescriptor conDescriptor = _app.getConnectionFactory().getConnection( url );
+			auth2Con = MyApp.doPost(_connfactory, url, property);
 			
-			if (conDescriptor == null)
-				throw new Exception("conDescriptor Error");
-			
-			// connection succeeded
-			int transportUsed = conDescriptor.getTransportDescriptor().getTransportType();
-			switch(transportUsed)
-			{
-				case TransportInfo.TRANSPORT_TCP_CELLULAR:
-					updateStatus("Connecting via Direct TCP");
-					break;
-				case TransportInfo.TRANSPORT_TCP_WIFI:
-					updateStatus("Connecting via WIFI");
-					break;
-			}
-			
-			auth1Con = (HttpsConnection) conDescriptor.getConnection();
-			
-			// Set the request method and headers
-			auth1Con.setRequestMethod(HttpsConnection.POST);
-			auth1Con.setRequestProperty("pragma", "no-cache");
-			auth1Con.setRequestProperty("X-Radiko-App", "pc_1");
-			auth1Con.setRequestProperty("X-Radiko-App-Version", "2.0.1");
-			auth1Con.setRequestProperty("X-Radiko-User", "test-stream");
-			auth1Con.setRequestProperty("X-Radiko-Device", "pc");
-			
-			int rc = auth1Con.getResponseCode();
-			if (rc != HttpsConnection.HTTP_OK)
-				throw new Exception("HTTP response code: " + rc);
-			
-			authToken = auth1Con.getHeaderField("X-RADIKO-AUTHTOKEN");
-			keylength = Integer.parseInt(auth1Con.getHeaderField("X-Radiko-KeyLength"));
-			keyoffset = Integer.parseInt(auth1Con.getHeaderField("X-Radiko-KeyOffset"));
-			
-			//updateStatus("AuthToken: " + authToken + "\n KeyLength: " + Integer.toString(keylength) + "\n KeyOffset: " + keyoffset);
-		} finally {
-			if(auth1Con != null){ auth1Con.close(); }
-		}
-		
-		/*
-		FileConnection fconn = (FileConnection)Connector.open("file:///SDCard/authkey.png");
-		//updateStatus("OK I'm " + fconn.getName() + " " + fconn.fileSize() );
-		if (!fconn.exists())
-			throw new Exception("Not Found authkey.png");
-		InputStream fconnIS =  fconn.openInputStream();
-		fconn.close();
-		*/
-
-		//---- Get Authkey --------------------------------------------- //
-		getAuthKey();
-		
-		//---- Get PartialKey --------------------------------------------- //
-		InputStream fconnIS = new ByteArrayInputStream(authkey);
-		
-		byte[] b1 = new byte[ keylength ];
-		
-		fconnIS.skip(keyoffset);
-		fconnIS.read(b1, 0, keylength);
-		fconnIS.close();
-		authkey = null;
-		
-		partialkey = new String( Base64OutputStream.encode(b1, 0, b1.length, false, false) );
-		
-		
-		//---- Get AreaID --------------------------------------------- //
-		try {
-			_app.getMainScreen().updateStatusField("„Ç®„É™„Ç¢Âà§ÂÆö‰∏≠...");
-			ConnectionDescriptor conDescriptor = _app.getConnectionFactory().getConnection( url2 );
-			
-			if (conDescriptor == null)
-				throw new Exception("conDescriptor ERROR");
-			
-			// using the connection
-			auth2Con = (HttpsConnection) conDescriptor.getConnection();
-			
-			// Set the request method and headers
-			auth2Con.setRequestMethod(HttpsConnection.POST);
-			auth2Con.setRequestProperty("pragma", "no-cache");
-			auth2Con.setRequestProperty("X-Radiko-App", "pc_1");
-			auth2Con.setRequestProperty("X-Radiko-App-Version", "2.0.1");
-			auth2Con.setRequestProperty("X-Radiko-Authtoken", authToken);
-			auth2Con.setRequestProperty("X-Radiko-Partialkey", partialkey);
-			
-			int rc = auth2Con.getResponseCode();
-			if (rc != HttpsConnection.HTTP_OK)
-				throw new IOException("HTTP response code: " + rc);
-		
-			// „É¨„Çπ„Éù„É≥„Çπ„ÇíËß£Êûê„Åó„Å¶„Ç®„É™„Ç¢ID„ÇíÂèñÂæó
+			// ÉåÉXÉ|ÉìÉXÇâêÕÇµÇƒÉGÉäÉAIDÇéÊìæ
+			String out = "";
 			LineReader lineReader = new LineReader(auth2Con.openDataInputStream());
 			for(;;)
 			{
@@ -165,92 +119,128 @@ public class Auth
 					String line = new String(lineReader.readLine());
 					if(line.length() != 0)
 					{
-						// „Ç®„É™„Ç¢ÂÜÖ„ÅÆÂ†¥Âêà„ÅØ'JP'„Åã„Çâ„ÄÅ„Ç®„É™„Ç¢Â§ñ„ÅÆÂ†¥Âêà„ÅØ'OUT'„Åã„ÇâÂßã„Åæ„Çã
-						if(line.startsWith("OUT"))
-						{
+						// ÉGÉäÉAì‡ÇÃèÍçáÇÕ'JP'Ç©ÇÁÅAÉGÉäÉAäOÇÃèÍçáÇÕ'OUT'Ç©ÇÁénÇ‹ÇÈ
+						if(line.startsWith("OUT")) {
 							throw new Exception("Out of Area");
-						}
-						else if(line.startsWith("JP"))
-						{
+						} else if(line.startsWith("JP")) {
 							int comma;
 							if((comma = line.indexOf(",")) == -1)
+							{
 								throw new Exception("Failed to get the AreaID (Not found 'comma')");
-
-							areaID = line.substring(0, comma);
-
-							updateStatus("Area_ID: " + areaID);
-						}
-						else
-						{
+							}
+							
+							out = line.substring(0, comma);
+							
+						} else {
 							throw new Exception("Failed to get the AreaID (Not found 'JP')");
 						}
 					}
-				}
-				catch(EOFException eof)
-				{
+				} catch(EOFException eof) {
 					break;
 				}
 			} //for
-
+			
+			return out;
+			
 		} finally {
-			if(auth2Con != null){ auth2Con.close(); }
+			if(auth2Con != null){ auth2Con.close(); auth2Con = null; }
 		}
-	} //doAuth
-
+	} //getAreaID()
 	
-	public String getAuthToken()
+	
+	private byte[] getAuthKey(ConnectionFactory _connfactory) throws IOException, Exception
 	{
-		return authToken;
-	}
-	
-	public String getCurrentAreaID()
-	{
-		return areaID;
-	}
-	
-	private static int decodeInt16(byte[] val)
-	{
-		// „É™„Éà„É´„Ç®„É≥„Éá„Ç£„Ç¢„É≥
-		return ((int)(val[0] & 0xFF) | (int)(val[1] & 0xFF) << 8);
-	}
-	
-	private static int decodeInt32(byte[] val)
-	{
-		// „É™„Éà„É´„Ç®„É≥„Éá„Ç£„Ç¢„É≥
-		return ((int)(val[0] & 0xFF) | (int)(val[1] & 0xFF) << 8 | (int)(val[2] & 0xFF) << 16 | (int)(val[3] & 0xFF) << 24);
-	}
-	
-	
-	private void getAuthKey() throws Exception
-	{
-		String url = "http://radiko.jp/player/swf/player_3.0.0.01.swf";
+		_app.getMainScreen().updateStatusField("ê⁄ë±íÜ... (2/4)");
 		
-		ConnectionFactory _factory = _app.getConnectionFactory();
-		if(_factory == null)
-			throw new IOException("getAuthKey() _factory Error");
+		// à¯êîÉ`ÉFÉbÉN
+		if(_connfactory == null) { throw new NullPointerException(); }
 		
-		// Get swf file
-		ConnectionDescriptor conDescriptor = _factory.getConnection(url);
-		if(conDescriptor == null)
-			throw new IOException("getAuthKey() conDescriptor Error");
+		// óLå¯Ç»í êMåoòHÇ™Ç†ÇÈÇ©ämîF
+		if(!MyApp.isCoverageSufficient()) { throw new IOException("OutCoverage"); }
 		
-		HttpConnection httpconn = (HttpConnection) conDescriptor.getConnection();
+		HttpConnection httpconn = null;
 		
 		try {
-			httpconn.setRequestMethod(HttpConnection.GET);
-		
-			int rc = httpconn.getResponseCode();
-			if (rc != HttpConnection.HTTP_OK)
-				throw new IOException("getAuthKey() HTTP response code: " + rc);
-		
-			parseSWF(httpconn.openInputStream());
-		
+			final String url = "http://radiko.jp/player/swf/player_3.0.0.01.swf";
+			
+			httpconn = MyApp.doGet(_connfactory, url);
+			
+			byte[] out = parseSWF(httpconn);
+			
+			return out;
 		} finally {
-			if(httpconn != null){ httpconn.close(); }
+			if(httpconn != null){ httpconn.close(); httpconn = null;}
 		}
 	} //getAuthKey()
 	
-	private void parseSWF(InputStream is) throws Exception
+	
+	private Hashtable getAuthtokenAndKeylengthAndKeyoffset(ConnectionFactory _connfactory) throws IOException, Exception
+	{
+		_app.getMainScreen().updateStatusField("ê⁄ë±íÜ... (1/4)");
+		
+		// à¯êîÉ`ÉFÉbÉN
+		if(_connfactory == null) { throw new NullPointerException(); }
+		
+		// óLå¯Ç»í êMåoòHÇ™Ç†ÇÈÇ©ämîF
+		if(!MyApp.isCoverageSufficient()) { throw new IOException("OutCoverage"); }
+		
+		final String url = "https://radiko.jp/v2/api/auth1_fms";
+		//final String url = "https://radiko.jp/v2/api/auth1_fms;deviceside=false;connectionUID=GPMDSAP01";
+		
+		Hashtable property = new Hashtable();
+		property.put("pragma", "no-cache");
+		property.put("X-Radiko-App", "pc_1");
+		property.put("X-Radiko-App-Version", "2.0.1");
+		property.put("X-Radiko-User", "test-stream");
+		property.put("X-Radiko-Device", "pc");
+		
+		HttpsConnection auth1Con = null;
+		
+		try {
+			auth1Con = MyApp.doPost(_connfactory, url, property);
+			
+			Hashtable out = new Hashtable();
+			out.put("authToken", auth1Con.getHeaderField("X-RADIKO-AUTHTOKEN"));
+			out.put("keylength", auth1Con.getHeaderField("X-Radiko-KeyLength"));
+			out.put("keyoffset", auth1Con.getHeaderField("X-Radiko-KeyOffset"));
+			
+			return out;
+			
+		} finally {
+			if(auth1Con != null){ auth1Con.close(); auth1Con = null; }
+		}
+	} //getAuthtokenAndKeylengthAndKeyoffset()
+	
+	
+	private String getPartialkey(byte[] authkey, int keylength, int keyoffset) throws IOException
+	{
+		_app.getMainScreen().updateStatusField("ê⁄ë±íÜ... (3/4)");
+		
+		// à¯êîÉ`ÉFÉbÉN
+		if(authkey == null) { throw new NullPointerException(); }
+		if(authkey.length == 0) { throw new IllegalArgumentException(); }
+		if(keylength == 0) { throw new IllegalArgumentException(); }
+		
+		InputStream fconnIS  = null;
+		try {
+			fconnIS = new ByteArrayInputStream(authkey);
+			
+			byte[] b1 = new byte[ keylength ];
+			
+			fconnIS.skip(keyoffset);
+			fconnIS.read(b1, 0, keylength);
+			
+			String out = new String( Base64OutputStream.encode(b1, 0, b1.length, false, false) );
+			
+			return out;
+		
+		} finally {
+			if(fconnIS != null) { fconnIS.close(); fconnIS = null; }
+		}
+	} //getPartialkey()
+	
+	
+	private byte[] parseSWF(HttpConnection httpconn) throws Exception
 	{
 		// SWF and AMF Technology Center | Adobe Developer Connection
 		// http://www.adobe.com/devnet/swf.html
@@ -260,117 +250,133 @@ public class Auth
 		
 		// The SWF header
 		// Signature  | UI8  | Signature byte:
-		//                     ‚ÄúF‚Äù indicates uncompressed
-		//                     ‚ÄúC‚Äù indicates a zlib compressed SWF (SWF 6 and later only)
-		//                     ‚ÄúZ‚Äù indicates a LZMA compressed SWF (SWF 13 and later only)
-		// Signature  | ÔøºUI8  | ÔøºSignature byte always ‚ÄúW‚Äù
-		// ÔøºSignature  | UI8  | Signature byte always ‚ÄúS‚Äù
-		// ÔøºVersion    | UI8  | Single byte file version (for example, 0x06 for SWF 6)
-		// FileLength | UI32 | ÔøºÔøºLength of entire file in bytes
-		// ÔøºFrameSize  | ÔøºRECT | Frame size in twips
+		//                     ÅgFÅh indicates uncompressed
+		//                     ÅgCÅh indicates a zlib compressed SWF (SWF 6 and later only)
+		//                     ÅgZÅh indicates a LZMA compressed SWF (SWF 13 and later only)
+		// Signature  | UI8  | Signature byte always ÅgWÅh
+		// Signature  | UI8  | Signature byte always ÅgSÅh
+		// Version    | UI8  | Single byte file version (for example, 0x06 for SWF 6)
+		// FileLength | UI32 | Length of entire file in bytes
+		// FrameSize  | RECT | Frame size in twips
 		// FrameRate  | UI16 | Frame delay in 8.8 fixed number of frames per second
-		// FrameCount | ÔøºUI16 | ÔøºTotal number of frames in file
+		// FrameCount | UI16 | Total number of frames in file
 		
-		//---- Signature
-		byte[] header_Signature = readbytesFromStream(is, 3);
-		if(!Arrays.equals(header_Signature, new byte[]{'C', 'W', 'S'}))
-			throw new Exception("Failed to parse header_Signature"); 		
-		//updateStatus("Signature: " + new String(header_Signature));
+		InputStream is = null;
+		ZLibInputStream _zlibIS = null;
 		
-		//---- Version
-		// ‰∏çË¶Å„Å™„ÅÆ„Åß„Çπ„Ç≠„ÉÉ„Éó
-		is.skip(1);
-		//byte[] header_Version = readbytesFromStream(is, 1);
-		//updateStatus("Version: " + header_Version[0]);
-		
-		
-		//---- FileLength
-		// ‰∏çË¶Å„Å™„ÅÆ„Åß„Çπ„Ç≠„ÉÉ„Éó
-		is.skip(4);
-		//byte[] header_FileLength = readbytesFromStream(is, 4);
-		//updateStatus("FileLength: " + decodeInt32(header_FileLength));
-				
-		//---- „Åì„Åì„Åã„ÇâzlibËß£Âáç ----//
-		
-		//---- zlib
-		ZLibInputStream _zlibIS = new ZLibInputStream(is, false);
-		
-		//---- FrameSize
-		// Èï∑„Åï„ÅØË®àÁÆó„Åó„Åæ„Åõ„Çì„ÄÇ„Åπ„Åü„Åß„ÅÑ„Åç„Åæ„Åô„ÄÇ„Åô„Åø„Åæ„Åõ„Çì„ÄÇ
-		// ‰∏çË¶Å„Å™„ÅÆ„Åß„Çπ„Ç≠„ÉÉ„Éó
-		_zlibIS.skip(1+7);
-		//byte[] header_FrameSize = readbytesFromStream(_zlibIS, 1+7);
-		//updateStatus("FrameSize: " + ByteArrayUtilities.byteArrayToHex(header_FrameSize));
-		
-		//---- FrameRate
-		//„ÄÄ‰∏çË¶Å„Å™„ÅÆ„Åß„Çπ„Ç≠„ÉÉ„Éó
-		_zlibIS.skip(2);
-		//byte[] header_FrameRate = readbytesFromStream(_zlibIS, 2);
-		//updateStatus("FrameRate: " + header_FrameRate[1] + "." + header_FrameRate[0]);
-		
-		//---- FrameCount
-		// ‰∏çË¶Å„Å™„ÅÆ„Åß„Çπ„Ç≠„ÉÉ„Éó
-		_zlibIS.skip(2);
-		//byte[] header_FrameCount = readbytesFromStream(_zlibIS, 2);		
-		//updateStatus("FrameCount: " + decodeInt16(header_FrameCount));
-		
-		//---- „Éò„ÉÉ„ÉÄ„Åì„Åì„Åæ„Åß ----//
-		//---- „Çø„Ç∞„Åì„Åì„Åã„Çâ ----//
-		
-		while(true)
-		{
-			// Tag format
-			// RECORDHEADER (short)
-			// TagCodeAndLength | UI16 | Upper 10 bits: tag type Lower 6 bits: tag length
-			//
-			// RECORDHEADER (long)
-			// TagCodeAndLength | UI16 | Tag type and length of 0x3F Packed together as in short header
-			// Length           | UI32 | Length of tag
+		try {
+			byte[] out = null;
 			
-			int tagCode = 0;
-			int tagLength = 0;
+			is = httpconn.openInputStream();
 			
-			byte[] tagCodeAndLength = readbytesFromStream(_zlibIS, 2);
-			tagCode = (tagCodeAndLength[1] << 2) | ((tagCodeAndLength[0] & 0xC0) >> 6);
-			
-			if((tagCodeAndLength[0] & 0x3F) != 0x3F)
-				tagLength = tagCodeAndLength[0] & 0x3F;
-			else
-				tagLength = decodeInt32(readbytesFromStream(_zlibIS, 4));
-			
-			// Code„ÅåDefineBinaryData(Tag type 0x57)„ÅÆÂ†¥Âêà„ÅÆ„ÅøÂá¶ÁêÜ
-			if(tagCode == 0x57)
+			//---- Signature
+			byte[] header_Signature = readbytesFromStream(is, 3);
+			if(!Arrays.equals(header_Signature, new byte[]{'C', 'W', 'S'}))
 			{
-				// DefineBinaryData
-				// Header   | RECORDHEADER | ÔøºTag type = 87(0x57)
-				// Tag      | ÔøºUI16         | Ôøº16-bit character ID
-				// Reserved | ÔøºU32          | ÔøºÔøºReserved space; must be 0
-				// ÔøºData     | ÔøºBINARY       | A blob of binary data, up to the end of the tag
-				
-				byte[] tag = readbytesFromStream(_zlibIS, 2);
-				
-				// ÁõÆÁöÑ„ÅÆ„Éá„Éº„Çø„ÅØ14„Å´‰øùÂ≠ò„Åï„Çå„Å¶„ÅÑ„Çã„ÄÇ14„ÅÆÂ†¥Âêà„ÅÆ„ÅøÂá¶ÁêÜ
-				if(decodeInt16(tag) == 14)
-				{
-					byte[] reserved = readbytesFromStream(_zlibIS, 4);
-					if(decodeInt32(reserved) != 0)
-						throw new Exception("Tag parser Error");
-					authkey = readbytesFromStream(_zlibIS, tagLength - (2+4));
-				}
-				else
-				{
-					_zlibIS.skip(tagLength -2);
-				}
+				throw new Exception("Failed to parse header_Signature");
 			}
-			else
+			//updateStatus("Signature: " + new String(header_Signature));
+			
+			//---- Version
+			// ïsóvÇ»ÇÃÇ≈ÉXÉLÉbÉv
+			is.skip(1);
+			//byte[] header_Version = readbytesFromStream(is, 1);
+			//updateStatus("Version: " + header_Version[0]);
+			
+			
+			//---- FileLength
+			// ïsóvÇ»ÇÃÇ≈ÉXÉLÉbÉv
+			is.skip(4);
+			//byte[] header_FileLength = readbytesFromStream(is, 4);
+			//updateStatus("FileLength: " + decodeInt32(header_FileLength));
+					
+			//---- Ç±Ç±Ç©ÇÁzlibâìÄ ----//
+			
+			//---- zlib
+			_zlibIS = new ZLibInputStream(is, false);
+			
+			//---- FrameSize
+			// í∑Ç≥ÇÕåvéZÇµÇ‹ÇπÇÒÅBÇ◊ÇΩÇ≈Ç¢Ç´Ç‹Ç∑ÅBÇ∑Ç›Ç‹ÇπÇÒÅB
+			// ïsóvÇ»ÇÃÇ≈ÉXÉLÉbÉv
+			_zlibIS.skip(1+7);
+			//byte[] header_FrameSize = readbytesFromStream(_zlibIS, 1+7);
+			//updateStatus("FrameSize: " + ByteArrayUtilities.byteArrayToHex(header_FrameSize));
+			
+			//---- FrameRate
+			//Å@ïsóvÇ»ÇÃÇ≈ÉXÉLÉbÉv
+			_zlibIS.skip(2);
+			//byte[] header_FrameRate = readbytesFromStream(_zlibIS, 2);
+			//updateStatus("FrameRate: " + header_FrameRate[1] + "." + header_FrameRate[0]);
+			
+			//---- FrameCount
+			// ïsóvÇ»ÇÃÇ≈ÉXÉLÉbÉv
+			_zlibIS.skip(2);
+			//byte[] header_FrameCount = readbytesFromStream(_zlibIS, 2);
+			//updateStatus("FrameCount: " + decodeInt16(header_FrameCount));
+			
+			//---- ÉwÉbÉ_Ç±Ç±Ç‹Ç≈ ----//
+			//---- É^ÉOÇ±Ç±Ç©ÇÁ ----//
+			
+			while(true)
 			{
-				_zlibIS.skip(tagLength);
+				// Tag format
+				// RECORDHEADER (short)
+				// TagCodeAndLength | UI16 | Upper 10 bits: tag type Lower 6 bits: tag length
+				//
+				// RECORDHEADER (long)
+				// TagCodeAndLength | UI16 | Tag type and length of 0x3F Packed together as in short header
+				// Length           | UI32 | Length of tag
+				
+				int tagCode = 0;
+				int tagLength = 0;
+				
+				byte[] tagCodeAndLength = readbytesFromStream(_zlibIS, 2);
+				tagCode = (tagCodeAndLength[1] << 2) | ((tagCodeAndLength[0] & 0xC0) >> 6);
+				
+				if((tagCodeAndLength[0] & 0x3F) != 0x3F) {
+					tagLength = tagCodeAndLength[0] & 0x3F;
+				} else {
+					tagLength = decodeInt32(readbytesFromStream(_zlibIS, 4));
+				}
+				
+				// CodeÇ™DefineBinaryData(Tag type 0x57)ÇÃèÍçáÇÃÇ›èàóù
+				if(tagCode == 0x57) {
+					// DefineBinaryData
+					// Header   | RECORDHEADER | Tag type = 87(0x57)
+					// Tag      | UI16         | 16-bit character ID
+					// Reserved | U32          | Reserved space; must be 0
+					// Data     | BINARY       | A blob of binary data, up to the end of the tag
+					
+					byte[] tag = readbytesFromStream(_zlibIS, 2);
+					
+					// ñ⁄ìIÇÃÉfÅ[É^ÇÕ14Ç…ï€ë∂Ç≥ÇÍÇƒÇ¢ÇÈÅB14ÇÃèÍçáÇÃÇ›èàóù
+					if(decodeInt16(tag) == 14) {
+						byte[] reserved = readbytesFromStream(_zlibIS, 4);
+						
+						if(decodeInt32(reserved) != 0) 
+						{
+							throw new Exception("Tag parser Error");
+						}
+						
+						out = readbytesFromStream(_zlibIS, tagLength - (2+4));
+					} else {
+						_zlibIS.skip(tagLength -2);
+					}
+				} else {
+					_zlibIS.skip(tagLength);
+				}
+				
+				if(tagCode == 0) { break; }
 			}
 			
-			if(tagCode == 0)
-				break;
-		}		
-	}  //parseSWF()
+			return out;
+			
+		} finally {
+			if(_zlibIS != null) { _zlibIS.close(); _zlibIS = null; }
+			if(is != null) { is.close(); is = null; }
+		}
+	} //parseSWF()
+	
 	
 	private byte[] readbytesFromStream(InputStream is, int length) throws Exception 
 	{
@@ -380,15 +386,28 @@ public class Auth
 		{
 			int readNum = 0;
 			if((readNum = is.read( b, totalReadNum, b.length - totalReadNum)) == -1)
-				throw new Exception("Failed to read");     	
+				throw new Exception("Failed to read");
 			totalReadNum += readNum;
 		}
 		
 		return b;
 	} //readbytesFromStream()
 	
+	
 	private void updateStatus(String val)
 	{
 		_app.updateStatus("[Auth] " + val);
+	}
+	
+	private static int decodeInt16(byte[] val)
+	{
+		// ÉäÉgÉãÉGÉìÉfÉBÉAÉì
+		return ((int)(val[0] & 0xFF) | (int)(val[1] & 0xFF) << 8);
+	}
+	
+	private static int decodeInt32(byte[] val)
+	{
+		// ÉäÉgÉãÉGÉìÉfÉBÉAÉì
+		return ((int)(val[0] & 0xFF) | (int)(val[1] & 0xFF) << 8 | (int)(val[2] & 0xFF) << 16 | (int)(val[3] & 0xFF) << 24);
 	}
 }
