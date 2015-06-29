@@ -22,8 +22,8 @@
 package mypackage;
 
 import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.EOFException;
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.Hashtable;
 
@@ -40,59 +40,39 @@ import net.rim.device.api.util.Arrays;
 
 public class Auth
 {
-	private MyApp _app;
+	//private MyApp _app;
+	private static final int NUM_OF_TRIALS = 3;
 	
 	
 	public Auth(UiApplication app)
 	{
-		_app = (MyApp) app;
+		// DO NOTHING
+		//_app = (MyApp) app;
 	}
 	
 	
-	public void doAuth() throws Exception
+	public static String getAreaID(ConnectionFactory _connfactory, MyScreen _screen, String authToken, int keylength, int keyoffset) throws Exception
 	{
-		ConnectionFactory _connfactory = _app.getConnectionFactory();
-		
-		// Get AuthToken, Keylength, Keyoffset
-		Hashtable tmp = getAuthtokenAndKeylengthAndKeyoffset(_connfactory);
-		String authToken = ((String)tmp.get("authToken"));
-		int keylength = Integer.parseInt((String)tmp.get("keylength"));
-		int keyoffset = Integer.parseInt((String)tmp.get("keyoffset"));
-		tmp.clear();
-		tmp = null;
-		
-		// Get Authkey
-		byte[] authkey = getAuthKey(_connfactory);
-		
-		// Get PartialKey
-		String partialkey = getPartialkey(authkey, keylength, keyoffset);
-		
-		// Get AreaID
-		String areaID = getAreaID(_connfactory, authToken, partialkey);
-		
-		// Store
-		_app.setAuthToken(authToken);
-		_app.setAreaID(areaID);
-		
-		updateStatus("Area_ID: " + areaID);
-		
-	} //doAuth()
-	
-	
-	private String getAreaID(ConnectionFactory _connfactory, String authToken, String partialkey) throws IOException, Exception
-	{
-		_app.getMainScreen().updateStatusField("接続中... (4/4)");
-		
 		// 引数チェック
 		if(_connfactory == null) { throw new NullPointerException(); }
 		if(authToken == null) { throw new NullPointerException(); }
 		if(authToken.length() == 0) { throw new IllegalArgumentException(); }
-		if(partialkey == null) { throw new NullPointerException(); }
-		if(partialkey.length() == 0) { throw new IllegalArgumentException(); }
+		if(keylength == 0) { throw new IllegalArgumentException(); }
 		
+		
+		// Get Authkey
+		_screen.updateStatusField("接続中... (2/4)");
+		byte[] authkey = getAuthKey(_connfactory);
+		
+		// Get PartialKey
+		_screen.updateStatusField("接続中... (3/4)");
+		String partialkey = getPartialkey(authkey, keylength, keyoffset);
+		
+		// Get AreaID
+		_screen.updateStatusField("接続中... (4/4)");
 		
 		// 有効な通信経路があるか確認
-		if(!MyApp.isCoverageSufficient()) { throw new IOException("OutCoverage"); }
+		if(!Network.isCoverageSufficient()) { throw new Exception("OutOfCoverage"); }
 		
 		final String url = "https://radiko.jp/v2/api/auth2_fms";
 		//final String url = "https://radiko.jp/v2/api/auth2_fms;deviceside=false;connectionUID=GPMDSAP01";
@@ -105,84 +85,71 @@ public class Auth
 		property.put("X-Radiko-Authtoken", authToken);
 		property.put("X-Radiko-Partialkey", partialkey);
 		
-		HttpsConnection auth2Con = null;
+		String errorlog = "Auth::getAreaID()\n";
 		
-		try {
-			auth2Con = MyApp.doPost(_connfactory, url, property);
+		for(int i=0; i<NUM_OF_TRIALS; i++)
+		{
+			HttpsConnection auth2Con = null;
+			DataInputStream dis = null;
 			
-			// レスポンスを解析してエリアIDを取得
-			String out = "";
-			LineReader lineReader = new LineReader(auth2Con.openDataInputStream());
-			for(;;)
-			{
-				try {
-					String line = new String(lineReader.readLine());
-					if(line.length() != 0)
-					{
-						// エリア内の場合は'JP'から、エリア外の場合は'OUT'から始まる
-						if(line.startsWith("OUT")) {
-							throw new Exception("Out of Area");
-						} else if(line.startsWith("JP")) {
-							int comma;
-							if((comma = line.indexOf(",")) == -1)
-							{
-								throw new Exception("Failed to get the AreaID (Not found 'comma')");
+			try {
+				auth2Con = Network.doPost(_connfactory, url, property);
+				
+				// レスポンスを解析してエリアIDを取得
+				String out = "";
+				dis = auth2Con.openDataInputStream();
+				LineReader lineReader = new LineReader(dis);
+				for(;;)
+				{
+					try {
+						String line = new String(lineReader.readLine());
+						if(line.length() != 0)
+						{
+							// エリア内の場合は'JP'から、エリア外の場合は'OUT'から始まる
+							if(line.startsWith("OUT")) {
+								throw new Exception("Out of Area");
+							} else if(line.startsWith("JP")) {
+								int comma;
+								if((comma = line.indexOf(",")) == -1)
+								{
+									throw new Exception("Failed to get the AreaID (Not found 'comma')");
+								}
+								
+								out = line.substring(0, comma);
+								
+							} else {
+								throw new Exception("Failed to get the AreaID (Not found 'JP')");
 							}
-							
-							out = line.substring(0, comma);
-							
-						} else {
-							throw new Exception("Failed to get the AreaID (Not found 'JP')");
 						}
+					} catch(EOFException eof) {
+						break;
 					}
-				} catch(EOFException eof) {
-					break;
-				}
-			} //for
+				} //for
+				
+				return out;
 			
-			return out;
+			} catch (Exception e) {
+				errorlog += e.toString() + "\n";
+			} finally {
+				if(dis != null){ dis.close(); dis = null; }
+				if(auth2Con != null){ auth2Con.close(); auth2Con = null; }
+			}
 			
-		} finally {
-			if(auth2Con != null){ auth2Con.close(); auth2Con = null; }
+			Thread.sleep(1000);
 		}
+		throw new Exception(errorlog);
 	} //getAreaID()
 	
 	
-	private byte[] getAuthKey(ConnectionFactory _connfactory) throws IOException, Exception
+	public static Hashtable getAuthtokenAndKeylengthAndKeyoffset(ConnectionFactory _connfactory, MyScreen _screen) throws Exception
 	{
-		_app.getMainScreen().updateStatusField("接続中... (2/4)");
+		_screen.updateStatusField("接続中... (1/4)");
 		
 		// 引数チェック
-		if(_connfactory == null) { throw new NullPointerException(); }
+		if(_connfactory == null) { throw new NullPointerException("ConnectionFactory"); }
 		
 		// 有効な通信経路があるか確認
-		if(!MyApp.isCoverageSufficient()) { throw new IOException("OutCoverage"); }
-		
-		HttpConnection httpconn = null;
-		
-		try {
-			final String url = "http://radiko.jp/player/swf/player_3.0.0.01.swf";
-			
-			httpconn = MyApp.doGet(_connfactory, url);
-			
-			byte[] out = parseSWF(httpconn);
-			
-			return out;
-		} finally {
-			if(httpconn != null){ httpconn.close(); httpconn = null;}
-		}
-	} //getAuthKey()
-	
-	
-	private Hashtable getAuthtokenAndKeylengthAndKeyoffset(ConnectionFactory _connfactory) throws IOException, Exception
-	{
-		_app.getMainScreen().updateStatusField("接続中... (1/4)");
-		
-		// 引数チェック
-		if(_connfactory == null) { throw new NullPointerException(); }
-		
-		// 有効な通信経路があるか確認
-		if(!MyApp.isCoverageSufficient()) { throw new IOException("OutCoverage"); }
+		if(!Network.isCoverageSufficient()) { throw new Exception("OutOfCoverage"); }
 		
 		final String url = "https://radiko.jp/v2/api/auth1_fms";
 		//final String url = "https://radiko.jp/v2/api/auth1_fms;deviceside=false;connectionUID=GPMDSAP01";
@@ -194,53 +161,126 @@ public class Auth
 		property.put("X-Radiko-User", "test-stream");
 		property.put("X-Radiko-Device", "pc");
 		
-		HttpsConnection auth1Con = null;
+		String errorlog = "Auth::getAuthtokenAndKeylengthAndKeyoffset()\n";
 		
-		try {
-			auth1Con = MyApp.doPost(_connfactory, url, property);
+		for(int i=0; i<NUM_OF_TRIALS; i++)
+		{
+			HttpsConnection auth1Con = null;
 			
-			Hashtable out = new Hashtable();
-			out.put("authToken", auth1Con.getHeaderField("X-RADIKO-AUTHTOKEN"));
-			out.put("keylength", auth1Con.getHeaderField("X-Radiko-KeyLength"));
-			out.put("keyoffset", auth1Con.getHeaderField("X-Radiko-KeyOffset"));
+			try {
+				auth1Con = Network.doPost(_connfactory, url, property);
+				
+				Hashtable out = new Hashtable();
+				out.put("authToken", auth1Con.getHeaderField("X-RADIKO-AUTHTOKEN"));
+				out.put("keylength", auth1Con.getHeaderField("X-Radiko-KeyLength"));
+				out.put("keyoffset", auth1Con.getHeaderField("X-Radiko-KeyOffset"));
+				
+				return out;
+				
+			} catch (Exception e) {
+				errorlog += e.toString() + "\n";
+			} finally {
+				if(auth1Con != null){ auth1Con.close(); auth1Con = null; }
+			}
 			
-			return out;
-			
-		} finally {
-			if(auth1Con != null){ auth1Con.close(); auth1Con = null; }
+			Thread.sleep(1000);
 		}
+		throw new Exception(errorlog);
 	} //getAuthtokenAndKeylengthAndKeyoffset()
 	
 	
-	private String getPartialkey(byte[] authkey, int keylength, int keyoffset) throws IOException
+	/*private void updateStatus(String val)
 	{
-		_app.getMainScreen().updateStatusField("接続中... (3/4)");
+		_app.updateStatus("[Auth] " + val);
+	}*/
+	
+	
+	private static int decodeInt16(byte[] val)
+	{
+		// リトルエンディアン
+		return ((int)(val[0] & 0xFF) | (int)(val[1] & 0xFF) << 8);
+	}
+	
+	
+	private static int decodeInt32(byte[] val)
+	{
+		// リトルエンディアン
+		return ((int)(val[0] & 0xFF) | (int)(val[1] & 0xFF) << 8 | (int)(val[2] & 0xFF) << 16 | (int)(val[3] & 0xFF) << 24);
+	}
+	
+	
+	private static byte[] getAuthKey(ConnectionFactory _connfactory) throws Exception
+	{
+		// 引数チェック
+		if(_connfactory == null) { throw new NullPointerException(); }
 		
+		// 有効な通信経路があるか確認
+		if(!Network.isCoverageSufficient()) { throw new Exception("OutOfCoverage"); }
+		
+		String errorlog = "Auth::getAuthKey()\n";
+		
+		for(int j=0; j<NUM_OF_TRIALS; j++)
+		{
+			HttpConnection httpconn = null;
+			
+			try {
+				final String url = "http://radiko.jp/player/swf/player_3.0.0.01.swf";
+				
+				httpconn = Network.doGet(_connfactory, url);
+				
+				byte[] out = parseSWF(httpconn);
+				
+				return out;
+				
+			} catch (Exception e) {
+				errorlog += e.toString() + "\n";
+			} finally {
+				if(httpconn != null){ httpconn.close(); httpconn = null;}
+			}
+			
+			Thread.sleep(1000);
+		}
+		throw new Exception(errorlog);
+	} //getAuthKey()
+	
+	
+	private static String getPartialkey(byte[] authkey, int keylength, int keyoffset) throws Exception
+	{
 		// 引数チェック
 		if(authkey == null) { throw new NullPointerException(); }
 		if(authkey.length == 0) { throw new IllegalArgumentException(); }
 		if(keylength == 0) { throw new IllegalArgumentException(); }
 		
-		InputStream fconnIS  = null;
-		try {
-			fconnIS = new ByteArrayInputStream(authkey);
+		String errorlog = "Auth::getPartialkey()\n";
+				
+		for(int j=0; j<NUM_OF_TRIALS; j++)
+		{
+			InputStream fconnIS  = null;
+			try {
+				fconnIS = new ByteArrayInputStream(authkey);
+				
+				byte[] b1 = new byte[ keylength ];
+				
+				fconnIS.skip(keyoffset);
+				fconnIS.read(b1, 0, keylength);
+				
+				String out = new String( Base64OutputStream.encode(b1, 0, b1.length, false, false) );
+				
+				return out;
+				
+			} catch (Exception e) {
+				errorlog += e.toString() + "\n";
+			} finally {
+				if(fconnIS != null) { fconnIS.close(); fconnIS = null; }
+			}
 			
-			byte[] b1 = new byte[ keylength ];
-			
-			fconnIS.skip(keyoffset);
-			fconnIS.read(b1, 0, keylength);
-			
-			String out = new String( Base64OutputStream.encode(b1, 0, b1.length, false, false) );
-			
-			return out;
-		
-		} finally {
-			if(fconnIS != null) { fconnIS.close(); fconnIS = null; }
+			Thread.sleep(1000);
 		}
+		throw new Exception(errorlog);
 	} //getPartialkey()
 	
 	
-	private byte[] parseSWF(HttpConnection httpconn) throws Exception
+	private static byte[] parseSWF(HttpConnection httpconn) throws Exception
 	{
 		// SWF and AMF Technology Center | Adobe Developer Connection
 		// http://www.adobe.com/devnet/swf.html
@@ -378,7 +418,7 @@ public class Auth
 	} //parseSWF()
 	
 	
-	private byte[] readbytesFromStream(InputStream is, int length) throws Exception 
+	private static byte[] readbytesFromStream(InputStream is, int length) throws Exception 
 	{
 		byte[] b = new byte[length];
 		int totalReadNum = 0;
@@ -392,22 +432,4 @@ public class Auth
 		
 		return b;
 	} //readbytesFromStream()
-	
-	
-	private void updateStatus(String val)
-	{
-		_app.updateStatus("[Auth] " + val);
-	}
-	
-	private static int decodeInt16(byte[] val)
-	{
-		// リトルエンディアン
-		return ((int)(val[0] & 0xFF) | (int)(val[1] & 0xFF) << 8);
-	}
-	
-	private static int decodeInt32(byte[] val)
-	{
-		// リトルエンディアン
-		return ((int)(val[0] & 0xFF) | (int)(val[1] & 0xFF) << 8 | (int)(val[2] & 0xFF) << 16 | (int)(val[3] & 0xFF) << 24);
-	}
 }
