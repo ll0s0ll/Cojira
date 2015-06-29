@@ -21,21 +21,9 @@
 
 package mypackage;
 
-import java.io.IOException;
-import java.util.Hashtable;
-import java.util.Stack;
-import java.util.Vector;
-
-import javax.microedition.io.HttpConnection;
-
-import org.xml.sax.Attributes;
-import org.xml.sax.SAXException;
-import org.xml.sax.helpers.DefaultHandler;
-
 import net.rim.device.api.command.Command;
 import net.rim.device.api.command.CommandHandler;
 import net.rim.device.api.command.ReadOnlyCommandMetadata;
-import net.rim.device.api.io.transport.ConnectionDescriptor;
 import net.rim.device.api.system.Bitmap;
 import net.rim.device.api.system.Display;
 import net.rim.device.api.ui.Color;
@@ -43,10 +31,8 @@ import net.rim.device.api.ui.Field;
 import net.rim.device.api.ui.Font;
 import net.rim.device.api.ui.Graphics;
 import net.rim.device.api.ui.Manager;
-import net.rim.device.api.ui.TransitionContext;
 import net.rim.device.api.ui.Ui;
 import net.rim.device.api.ui.UiApplication;
-import net.rim.device.api.ui.UiEngineInstance;
 import net.rim.device.api.ui.XYEdges;
 import net.rim.device.api.ui.XYRect;
 import net.rim.device.api.ui.component.LabelField;
@@ -65,25 +51,22 @@ import net.rim.device.api.ui.container.MainScreen;
 import net.rim.device.api.ui.decor.BackgroundFactory;
 import net.rim.device.api.ui.decor.Border;
 import net.rim.device.api.ui.decor.BorderFactory;
-import net.rim.device.api.xml.jaxp.SAXParserImpl;
 
 public class EPGScreen extends MainScreen
 {
-	private MyApp _app;
-	private Hashtable stationInfo;
-	private Vector progs = new Vector();
+	private MyApp _app = null;
+	private Program[] programs = null;
 	
 	private TableModel _tableModel;
 	private TableView _tableView;
-	private TableController _controller; 
+	private ActivityIndicatorView _aiView = null;
 	
 	
-	public EPGScreen(int rowNumberWithFocus)
+	public EPGScreen()
 	{
 		super(Manager.NO_VERTICAL_SCROLL);
 		
 		_app = (MyApp) UiApplication.getUiApplication();
-		stationInfo = (Hashtable) _app._epg.GetStationsInfoV().elementAt(rowNumberWithFocus);
 		
 		StandardTitleBar _titleBar = new StandardTitleBar();
 		_titleBar.addSignalIndicator();
@@ -101,37 +84,18 @@ public class EPGScreen extends MainScreen
 		//_tableView.setDataTemplateFocus(BackgroundFactory.createSolidTransparentBackground(Color.LIGHTBLUE, 125));
 		_tableView.setDataTemplateFocus(BackgroundFactory.createSolidBackground(Color.LIGHTBLUE));
 
-		_controller = new TableController(_tableModel, _tableView, TableController.ROW_FOCUS);
-
-		_tableView.setController(_controller);
-
-
+		TableController _controller = new TableController(_tableModel, _tableView, TableController.ROW_FOCUS);
 		_controller.setCommand(new Command(new CommandHandler() 
 		{
 			
 			public void execute(ReadOnlyCommandMetadata metadata, Object context)
 			{
-				//---- For ProgInfoScreen ----//
-				//ProgInfoScreen _progInfoScreen = new ProgInfoScreen(ProgInfoScreen.NEXT, _tableView.getRowNumberWithFocus());
-				ProgInfoScreen _progInfoScreen = new ProgInfoScreen((Hashtable)progs.elementAt(_tableView.getRowNumberWithFocus()));
-				
-				// FADE IN
-				TransitionContext transIN = new TransitionContext(TransitionContext.TRANSITION_FADE);
-				transIN.setIntAttribute(TransitionContext.ATTR_DURATION, 100);
-				
-				UiEngineInstance engine = Ui.getUiEngineInstance();
-				engine.setTransition(null, _progInfoScreen, UiEngineInstance.TRIGGER_PUSH, transIN);
-				
-				// FADE OUT
-				TransitionContext transOUT = new TransitionContext(TransitionContext.TRANSITION_FADE);
-				transOUT.setIntAttribute(TransitionContext.ATTR_DURATION, 100);
-				transOUT.setIntAttribute(TransitionContext.ATTR_KIND, TransitionContext.KIND_OUT);
-				
-				engine.setTransition(_progInfoScreen, null, UiEngineInstance.TRIGGER_POP, transOUT);
-				
-				_app.pushScreen(_progInfoScreen);
+				Program prog = programs[_tableView.getRowNumberWithFocus()];
+				_app.showProgScreen(prog);
 			}
 		}));
+		_tableView.setController(_controller);
+		_controller = null;
 		
 		
 		DataTemplate dataTemplate = new DataTemplate(_tableView, 4, 1)
@@ -246,54 +210,15 @@ public class EPGScreen extends MainScreen
 		//dataTemplate.setColumnProperties(1, new TemplateColumnProperties(Display.getWidth() - dataTemplate.getColumnProperties(0).getWidth()));
 		
 		//Apply the template to the view
-		_tableView.setDataTemplate(dataTemplate);
 		dataTemplate.useFixedHeight(true);
+		_tableView.setDataTemplate(dataTemplate);
+		dataTemplate = null;
 		
 		add(_tableView);
-	} //EPGScreen()
-	
-	protected void onUiEngineAttached(boolean attached)
-	{
-		getProgramInfo();
-	}
-	
-	private void getAndParseXML() throws Exception
-	{
-		SAXParserImpl saxparser = new SAXParserImpl();
-		HttpConnection httpconn = null;
-		String url = "http://radiko.jp/v2/api/program/today?area_id=" + _app._epg.getAreaID();
 		
-		try {
-			updateStatus("Connecting..(EPG Screen SAX)");
-			
-			ConnectionDescriptor conDescriptor = _app.getConnectionFactory().getConnection( url );
-			
-			if (conDescriptor == null)
-				throw new Exception("conDescriptor ERROR");
-			
-			// using the connection
-			httpconn = (HttpConnection) conDescriptor.getConnection();
-				
-			// Set the request method and headers
-			httpconn.setRequestMethod(HttpConnection.GET);
-			
-			int rc = httpconn.getResponseCode();
-			if (rc != HttpConnection.HTTP_OK)
-				throw new IOException("SAX HTTP response code: " + rc);
-			
-			ProgramParserHandler handler = new ProgramParserHandler();
-			saxparser.parse(httpconn.openDataInputStream(), handler);
-			//saxparser.parse(url, handler, false);
-			
-		} finally {
-			if(httpconn != null){ httpconn.close(); }
-		}
-	}
-	
-	private void getProgramInfo()
-	{
+		
 		// ActivityIndicator ST
-		ActivityIndicatorView _aiView = new ActivityIndicatorView(Field.USE_ALL_WIDTH);
+		_aiView = new ActivityIndicatorView(Field.USE_ALL_WIDTH);
 		ActivityIndicatorModel aiModel = new ActivityIndicatorModel();
 		ActivityIndicatorController aiController = new ActivityIndicatorController();
 		
@@ -304,185 +229,62 @@ public class EPGScreen extends MainScreen
 		aiController.setModel(aiModel);
 		aiController.setView(_aiView);
 		aiModel.setController(aiController);
-		// Define the indicator image and create a field from it
 		Bitmap aiBitmap = Bitmap.getBitmapResource("spinner2.png");
 		
 		_aiView.createActivityImageField(aiBitmap, 6, Field.FIELD_HCENTER);
 		
-		this.setStatus(_aiView);
+		aiModel = null;
+		aiController = null;
+		aiBitmap = null;
 		
-		PGInfoThread _th = new PGInfoThread();
-		_th.start();
-	}
+	} //EPGScreen()
 	
-	private void updateStatus(final String message)
+	
+	public void addContents(Program[] programs)
+	{
+		this.programs = programs;
+		
+		synchronized (UiApplication.getEventLock()) 
+		{
+			for(int i=0; i<programs.length; i++)
+			{
+				Program prog = programs[i];
+				
+				String time = prog.getTime();
+				String title = prog.getTitle();
+				String pfm = prog.getPfm();
+				String desc = prog.getDescription();
+				String info = prog.getInfo();
+				
+				_tableModel.addRow(new Object[]{time, title, pfm, desc + info});
+			}
+		}
+	} //addContents()
+	
+	
+	public void hideActivityIndicator()
+	{
+		synchronized (UiApplication.getEventLock()) 
+		{
+			this.setStatus(null);
+		}
+	} //hideActivityIndicator()
+	
+	
+	public void showActivityIndicator()
+	{
+		synchronized (UiApplication.getEventLock()) 
+		{
+			this.setStatus(_aiView);
+		}
+	} //showActivityIndicator()
+	
+	
+	/*private void updateStatus(final String message)
 	{
 		synchronized (UiApplication.getEventLock())
 		{
 			_app.updateStatus("[EPGS] " + message);
 		}
-	}
-	
-	private void removeField()
-	{
-		this.setStatus(null);
-	}
-	
-	private class PGInfoThread extends Thread
-	{
-		PGInfoThread()
-		{
-			// DO NOTHING
-		}
-		
-		
-		public void run()
-		{
-			try {
-				updateStatus("PGInfoThread Start");
-				
-				getAndParseXML();
-				
-				synchronized (UiApplication.getEventLock()) 
-				{
-					removeField();
-				}
-				
-			} catch (Exception e) {
-				//updateStatus("PGInfoThread " + e.toString());
-				LabelField _tmpField = new LabelField("番組情報の更新に失敗しました。", Field.FIELD_HCENTER);
-				_tmpField.setFont(Font.getDefault().derive(Font.PLAIN, (Font.getDefault().getHeight(Ui.UNITS_pt) - 1), Ui.UNITS_pt));
-				_tmpField.setPadding(10, 0, 0, 0);
-				synchronized (UiApplication.getEventLock())
-				{
-					setStatus(_tmpField);
-				}
-			} //try()
-		} //run()
-    } //PGInfoThread
-
-
-	private class ProgramParserHandler extends DefaultHandler 
-	{
-		private Hashtable ht = new Hashtable();
-		private Stack stack = new Stack();
-		private boolean isSelectedStation;
-		
-		/*
-		public ProgramParserHandler()
-		{
-			// DO NOTHING
-		}
-		*/
-		
-		public void startElement(String uri, String localName, String qname, Attributes attributes) throws SAXException 
-		{
-			stack.push(qname);
-		
-			
-			if(qname.equals("station"))
-			{
-				if(attributes.getValue("id").equals(stationInfo.get("id")))
-					isSelectedStation = true;
-				else
-					isSelectedStation = false;
-				
-				//updateStatus("startElement() " + qname);
-					
-			}
-		
-			if(qname.equals("prog"))
-			{
-				if(isSelectedStation)
-				{
-					ht = null;
-					ht = new Hashtable();
-					
-					StringBuffer ftl = new StringBuffer(attributes.getValue("ftl"));
-					ftl.insert(2, ":");
-					StringBuffer tol = new StringBuffer(attributes.getValue("tol"));
-					tol.insert(2, ":");
-					//int dur = Integer.parseInt(attributes.getValue("dur"));
-					
-					ht.put("time", ftl.toString() + " - " + tol.toString());
-					//ht.put("time", ftl.toString() + " - " + tol.toString() + " (" + dur + "min.)");
-				}
-			}
-			
-		} //startElement()
-	
-		
-		public void endElement(String uri, String localName, String qName) throws SAXException
-		{			
-			if(qName.equals("prog"))
-			{
-				//updateStatus("endElement() " + qName);
-				if(isSelectedStation)
-				{
-					progs.addElement(ht);
-					
-					String desc = "";
-					if(ht.get("desc") != null)
-						desc = (String)ht.get("desc");
-					
-					String info = "";
-					if(ht.get("info") != null)
-						info = (String)ht.get("info");
-					
-					// Add data to the TableModel
-					_tableModel.addRow(new Object[]{(String)ht.get("time"), (String)ht.get("title"), (String)ht.get("pfm"), desc + info});
-					//_tableModel.addRow(new Object[]{(String)ht.get("title"), (String)ht.get("time"), (String)ht.get("pfm"), ""});
-				}
-			}
-			
-			if(qName.equals("station"))
-			{
-				isSelectedStation = false;
-				//updateStatus("startElement() " + qname);
-			}
-			
-			stack.pop();
-		} //endElement()
-		
-		public void characters(char[] ch, int start, int length) throws SAXException 
-		{
-			if(isSelectedStation)
-			{
-				if(stack.peek().equals("title"))
-				{
-					String element = new String(ch, start, length);
-					//updateStatus("characters() " + element);
-					ht.put("title", element);
-				}
-				
-				if(stack.peek().equals("pfm"))
-				{
-					String element = new String(ch, start, length);
-					//updateStatus("characters() " + element);
-					ht.put("pfm", element);
-				}
-				
-				if(stack.peek().equals("desc"))
-				{
-					String element = new String(ch, start, length);
-					//updateStatus("characters() " + element);
-					ht.put("desc", element);
-				}
-				
-				if(stack.peek().equals("info"))
-				{
-					String element = new String(ch, start, length);
-					//updateStatus("characters() " + element);
-					ht.put("info", element);
-				}
-				
-				if(stack.peek().equals("url"))
-				{
-					String element = new String(ch, start, length);
-					//updateStatus("characters() " + element);
-					ht.put("url", element);
-				}
-			}
-		} //characters()
-	} //ProgramParserHandler
+	}*/
 }

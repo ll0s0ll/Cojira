@@ -38,7 +38,7 @@ import net.rim.device.api.ui.UiApplication;
 public class MediaActions implements MediaActionHandler, PlayerListener
 {
 	private MyApp _app;
-	private RTMP _rtmp;
+	private RTMPDataSource _rtmpDataSource = null;
 	private Player _player;
 	private int currentVolume;
 	private boolean isOperating;
@@ -49,15 +49,10 @@ public class MediaActions implements MediaActionHandler, PlayerListener
 		// 
 		_app = (MyApp) app;
 		
-		_app.setOnCloseRunnable(new Runnable()
-		{
+		_app.setOnCloseRunnable(new Runnable() {
 			public void run() { close(); }
 		} );
-	}
-	
-	
-	public void Init()
-	{
+		
 		// Add Handler
 		_app.addMediaActionHandler(this);
 		
@@ -66,8 +61,8 @@ public class MediaActions implements MediaActionHandler, PlayerListener
 		
 		//
 		isOperating = false;
-	}
-
+	} //MediaActions()
+	
 	
 	private void close()
 	{
@@ -120,13 +115,10 @@ public class MediaActions implements MediaActionHandler, PlayerListener
 		{
 			updateStatus("MEDIA_ACTION_PLAYPAUSE_TOGGLE");
 			
-			if (isPlaying())
-			{
+			if (isPlaying()) {
 				//actionRunnable = new MediaAction(MEDIA_ACTION_PAUSE, source, context, MediaPlayerDemo.this);               
 				return doStop();
-			}
-			else 
-			{
+			} else {
 				//actionRunnable = new MediaAction(MEDIA_ACTION_PLAY, source, context, MediaPlayerDemo.this);
 				updateTitleBarTitle("バッファ中...");
 				return doPlay();
@@ -189,19 +181,26 @@ public class MediaActions implements MediaActionHandler, PlayerListener
 	{
 		updateStatus("doPlay()");
 		
-		isOperating = true;
+		final String domain = _app.getDomain();
+		if(domain == null) { return false; }
 		
-		final String station = _app._epg.GetCurrentStationID();
-		if(station == null)
-			return false;
+		final String stationID = _app.getCurrentStationID();
+		if(stationID == null) { return false; }
+		
+		final String authToken = _app.getAuthToken();
+		if(authToken == null) { return false; }
+		
+		
+		isOperating = true;
 		
 		new Thread()
 		{
 			public void run()
 			{
 				try {
-					_rtmp = new RTMP(station);
-					_player = Manager.createPlayer(_rtmp);
+					//_rtmp = new RTMP(station);
+					_rtmpDataSource = new RTMPDataSource(_app, _app.getConnectionFactory(), domain, stationID, authToken);
+					_player = Manager.createPlayer(_rtmpDataSource);
 					
 					//updateStatus("[Realize]");
 					_player.realize();
@@ -240,17 +239,15 @@ public class MediaActions implements MediaActionHandler, PlayerListener
 		updateStatus("doStop()");
 		
 		try {
-			_rtmp.stop();
-			_rtmp.disconnect();
+			_rtmpDataSource.stop();
+			_rtmpDataSource.disconnect();
 			
 			_player.stop();
 			_player.deallocate();
 			_player.close();
 			
-			if(_player != null)
-				_player = null;
-			if(_rtmp != null)
-				_rtmp = null;
+			if(_player != null) { _player = null; }
+			if(_rtmpDataSource != null) { _rtmpDataSource = null; }
 			
 			// スクリーンのタイトルを更新
 			updateTitleBarTitle(null);
@@ -321,7 +318,7 @@ public class MediaActions implements MediaActionHandler, PlayerListener
 	public boolean isOperating()
 	{
 		return isOperating;
-}
+	}
 	
 	public boolean isPlaying() 
 	{
@@ -329,12 +326,11 @@ public class MediaActions implements MediaActionHandler, PlayerListener
 	}
 	
 	
-	public void SetAudioPath()
+	public void setAudioPath()
 	{
 		AudioPathControl _audioPathCtrl = (AudioPathControl) _player.getControl("net.rim.device.api.media.control.AudioPathControl");
 		
-		if(_audioPathCtrl == null)
-			return;
+		if(_audioPathCtrl == null) { return; }
 		
 		try {
 			
@@ -347,16 +343,15 @@ public class MediaActions implements MediaActionHandler, PlayerListener
 				_audioPathCtrl.setAudioPath(net.rim.device.api.media.control.AudioPathControl.AUDIO_PATH_HANDSFREE);
 			}
 		} catch (IllegalArgumentException e) {
-		} catch (MediaException e) {
-		}
-		
-	}
+		} catch (MediaException e) {}
+	} //setAudioPath()
 	
-	public void updateStatus(String val)
+	
+	private void updateStatus(String val)
 	{
 		synchronized (UiApplication.getEventLock())
 		{
-			_app.updateStatus("[MA] " + val);
+			//_app.updateStatus("[MA] " + val);
 		}
 	}
 }

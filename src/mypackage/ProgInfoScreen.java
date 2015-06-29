@@ -22,7 +22,6 @@
 package mypackage;
 
 import java.io.UnsupportedEncodingException;
-import java.util.Hashtable;
 
 import net.rim.blackberry.api.browser.Browser;
 import net.rim.blackberry.api.browser.BrowserSession;
@@ -33,64 +32,28 @@ import net.rim.device.api.browser.field2.BrowserFieldRequest;
 import net.rim.device.api.browser.field2.ProtocolController;
 import net.rim.device.api.ui.Font;
 import net.rim.device.api.ui.Ui;
-import net.rim.device.api.ui.UiApplication;
 import net.rim.device.api.ui.component.StandardTitleBar;
 import net.rim.device.api.ui.container.MainScreen;
 
 
 public class ProgInfoScreen extends MainScreen
 {
-	
-	final static String CURRENT = "prog_now";
-	final static String NEXT    = "prog_next";
-	
-	private MyApp _app;
-	private StandardTitleBar _titleBar;
+	//private MyApp _app;
 	private BrowserField _browserField;
+		
 	
-	
-	public ProgInfoScreen(Hashtable prog)
+	public ProgInfoScreen()
 	{
-		_app = (MyApp) UiApplication.getUiApplication();
+		//_app = (MyApp) UiApplication.getUiApplication();
 		
 		//---- タイトルバーを作成
-		_titleBar = new StandardTitleBar();
+		StandardTitleBar _titleBar = new StandardTitleBar();
 		_titleBar.addSignalIndicator();
 		_titleBar.addNotifications();
 		_titleBar.addClock();
 		_titleBar.setPropertyValue(StandardTitleBar.PROPERTY_BATTERY_VISIBILITY, StandardTitleBar.BATTERY_VISIBLE_ALWAYS);
 		setTitleBar(_titleBar);
-		
-		// STYLE
-		String style = "body{font-size: " + (Font.getDefault().getHeight(Ui.UNITS_px) - 2) + "px;}";
-		style = style + "dd {margin-left: 0; font-size: " + (Font.getDefault().getHeight(Ui.UNITS_px) - 5) + "px;}";
-		
-		// BODY
-		String body = "<dl><dt>" + (String)prog.get("title") + "</dt>" + "<dd>" + (String)prog.get("time") + "</dd>";
-		
-		if((String)prog.get("pfm") != null)
-		{
-			body = body + "<dd>" + (String)prog.get("pfm") + "</dd>";
-		}
-		
-		if((String)prog.get("url") != null)
-		{
-			body = body + "<dd>" + "<a href=\"" + (String)prog.get("url") + "\">" + (String)prog.get("url") + "</a>" + "</dd>";
-		}
-		
-		body = body + "</dl>";
-		body = body + "<hr />";
-		
-		if(prog.get("desc") != null)
-		{
-			body = body + "<p>" + (String)prog.get("desc") + "</p>";
-		}
-		if(prog.get("info") != null)
-		{
-			body = body + "<p>" + (String)prog.get("info") + "</p>";
-		}
-		
-		String str = "<html><head><style type=\"text/css\">" + style + "</style></head><body>" + body + "</body>" + "</html>";		
+		_titleBar = null;
 		
 		// BrowserField Sample Code - Using the BrowserFieldC... - BlackBerry Support Community Forums
 		// http://supportforums.blackberry.com/t5/Java-Development/BrowserField-Sample-Code-Using-the-BrowserFieldConfig-class/ta-p/495716		
@@ -119,20 +82,57 @@ public class ProgInfoScreen extends MainScreen
 		
 		add(_browserField);
 		
-		// BrowserField Encoding problem - BlackBerry Support Community Forums
-		// http://supportforums.blackberry.com/t5/Java-Development/BrowserField-Encoding-problem/td-p/1428779
-		try {
-			_browserField.displayContent(str.getBytes("utf-8"), "text/html; charset=utf-8", "http://localhost/");
-		} catch (UnsupportedEncodingException e) {
-		}
-		
 	} //ProgramInfoScreen()
 	
-	private void updateStatus(final String message)
+	
+	public void addContents(final Program prog) throws UnsupportedEncodingException
+	{
+		// 引数チェック
+		if(prog == null) { throw new NullPointerException("prog"); }
+		
+		// 表示内容をHTMLで作成
+		// STYLE
+		String style = "body{font-size: " + (Font.getDefault().getHeight(Ui.UNITS_px) - 2) + "px;}";
+		style = style + "dd {margin-left: 0; font-size: " + (Font.getDefault().getHeight(Ui.UNITS_px) - 5) + "px;}";
+		
+		// BODY
+		String body = "<dl><dt>" + prog.getTitle() + "</dt>" + "<dd>" + prog.getTime() + "</dd>";
+		
+		if(prog.getPfm() != null)
+		{
+			body = body + "<dd>" + prog.getPfm() + "</dd>";
+		}
+		
+		if(prog.getUrl() != null)
+		{
+			body = body + "<dd>" + "<a href=\"" + prog.getUrl() + "\">" + prog.getUrl() + "</a>" + "</dd>";
+		}
+		
+		body = body + "</dl>";
+		body = body + "<hr />";
+		
+		if(prog.getDescription() != null)
+		{
+			body = body + "<p>" + prog.getDescription() + "</p>";
+		}
+		if(prog.getInfo() != null)
+		{
+			body = body + "<p>" + prog.getInfo() + "</p>";
+		}
+		
+		String str = "<html><head><style type=\"text/css\">" + style + "</style></head><body>" + body + "</body>" + "</html>";
+		
+		// 作成したHTMLを表示
+		_browserField.displayContent(str.getBytes("utf-8"), "text/html; charset=utf-8", "http://localhost/");
+		
+	} //addContents()
+	
+	
+	/*private void updateStatus(final String message)
 	{
 		synchronized (UiApplication.getEventLock()) 
 		{
 			_app.updateStatus("[PIS] " + message);
 		}
-	} //updateStatus()
+	}*/ //updateStatus()
 }

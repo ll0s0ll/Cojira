@@ -21,9 +21,7 @@
 
 package mypackage;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Enumeration;
+import java.io.DataInputStream;
 import java.util.Hashtable;
 import java.util.Stack;
 import java.util.Vector;
@@ -34,8 +32,6 @@ import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
-import net.rim.device.api.io.IOUtilities;
-import net.rim.device.api.io.transport.ConnectionDescriptor;
 import net.rim.device.api.io.transport.ConnectionFactory;
 import net.rim.device.api.system.Bitmap;
 import net.rim.device.api.ui.UiApplication;
@@ -44,331 +40,552 @@ import net.rim.device.api.xml.jaxp.SAXParserImpl;
 
 public final class EPG
 {
-	private MyApp _app;
-	
-	private String areaID;
-	private String areaName;
-	private Vector stationsInfoV;
-	private int currentStation;
+	//private MyApp _app;
+	private static final int NUM_OF_TRIALS = 3;
 	
 	
 	public EPG(UiApplication app)
 	{
-		_app = (MyApp) app;
+		// DO NOTHING
+		//_app = (MyApp) app;
 	}
 	
-	public String getAreaID()
-	{
-		return areaID;
-	}
 	
-	public String getAreaName()
+	public static Hashtable getCurrentPrograms(ConnectionFactory _connfactory, final String areaID) throws Exception
 	{
-		return areaName;
-	}
-	
-	public int GetCurrentStation()
-	{
-		//return (String) ((Hashtable)stationsInfoV.elementAt(currentStation)).get("id");
-		return currentStation;
-	}
-	
-	public String GetCurrentStationID()
-	{
-		return (String) ((Hashtable)stationsInfoV.elementAt(currentStation)).get("id");
-		//return currentStation;
-	}
-	
-	public String getCurrentStationName()
-	{
-		return (String) ((Hashtable)stationsInfoV.elementAt(currentStation)).get("name");
-	}
-	
-	public void getProgramInfo() throws Exception
-	{
-		if((areaID = _app._auth.getCurrentAreaID()) == null)
-			throw new Exception("AreaID Error");
+		// 引数チェック
+		if(_connfactory == null) { throw new NullPointerException("ConnectionFactory"); }
+		if(areaID == null) { throw new NullPointerException("areaID"); }
+		if(areaID.length() == 0) { throw new IllegalArgumentException("areaID"); }
 		
-		String url = "http://radiko.jp//v2/api/program/now?area_id=" + areaID;
-		ProgramParserHandler _handler = new ProgramParserHandler();
+		final String url = "http://radiko.jp//v2/api/program/now?area_id=" + areaID;
 		
-		getAndParseXML(url, _handler);
-	} //getProgramInfo()
-	
-	public Vector GetStationsInfoV()
-	{
-		return stationsInfoV;
+		return getProgramInfo(_connfactory, url);
 	}
 	
-	public void getStationList() throws Exception
+	
+	private static Hashtable getProgramInfo(ConnectionFactory _connfactory, final String url) throws Exception
 	{
-		HttpConnection httpconn = null;
+		// 引数チェック
+		if(_connfactory == null) { throw new NullPointerException("ConnectionFactory"); }
+		if(url == null) { throw new NullPointerException("url"); }
+		if(url.length() == 0) { throw new IllegalArgumentException("url"); }
 		
-		try {
-			updateStatus("Connecting..(EPG)");
-
-			if((areaID = _app._auth.getCurrentAreaID()) == null)
-				throw new Exception("AreaID Error");
-						
-			String url = "http://radiko.jp/v2/station/list/" + areaID + ".xml";
-			
-			stationsInfoV = new Vector();
-			StationParserHandler _handle = new StationParserHandler();
-			getAndParseXML(url, _handle);
-			
-			//放送局のロゴ画像を取得
-			getStationsLogo();
-			
-		} finally {
-			if(httpconn != null){ httpconn.close(); }
-		}
-	} //getStationList()
-	
-	public void SetCurrentStation(int val)
-	{
-		currentStation = val;
-	}
-	
-	private void getAndParseXML(String url, DefaultHandler handler) throws Exception
-	{
-		SAXParserImpl saxparser = new SAXParserImpl();
-		//ListParser receivedListHandler = new ListParser();
-		HttpConnection httpconn = null;
-		 
-		try {
-			//updateStatus("Connecting..(EPG INFO SAX)");
-	
-			ConnectionDescriptor conDescriptor = _app.getConnectionFactory().getConnection( url );
-			
-			if (conDescriptor == null)
-				throw new Exception("conDescriptor ERROR");
-			
-			// using the connection
-			httpconn = (HttpConnection) conDescriptor.getConnection();
-				
-			// Set the request method and headers
-			httpconn.setRequestMethod(HttpConnection.GET);
-
-			int rc = httpconn.getResponseCode();
-			if (rc != HttpConnection.HTTP_OK)
-				throw new IOException("SAX HTTP response code: " + rc);
-			
-			saxparser.parse(httpconn.openDataInputStream(), handler);
-			//saxparser.parse(url, handler, false);
-			
-		} finally {
-			if(httpconn != null){ httpconn.close(); }
-		}
-	} //getAndParseXML()
-	
-	private void getStationsLogo() throws Exception
-	{
-		if(stationsInfoV == null)
-			throw new Exception("stationsInfoV is NULL");
+		// 有効な通信経路があるか確認
+		if(!Network.isCoverageSufficient()) { throw new Exception("OutOfCoverage"); }
 		
-		for(Enumeration e = stationsInfoV.elements(); e.hasMoreElements(); )
+		String errorlog = "EPG::getProgramInfo()\n";
+		
+		for(int i=0; i<NUM_OF_TRIALS; i++)
 		{
-			Hashtable station = (Hashtable) e.nextElement();
-	
-			// LOGO
-			Bitmap bitmap = GetWebBitmap((String) station.get("logo_medium"));
-
-			station.put("station_logo",	bitmap);
-		}
-	}
-	
-	private Bitmap GetWebBitmap(String url) throws Exception
-	{
-		InputStream is;
-		byte[] imageData;
-	
-		ConnectionFactory _factory = _app.getConnectionFactory();
-		if(_factory == null)
-			throw new IOException("[bitmap] _factory Error");
-
-	
-		ConnectionDescriptor conDescriptor = _factory.getConnection(url);
-		if(conDescriptor == null)
-			throw new IOException("[bitmap] conDescriptor Error");
-
-		HttpConnection httpconn = (HttpConnection) conDescriptor.getConnection();
-
-		try {
-			httpconn.setRequestMethod(HttpConnection.GET);
-
-			int rc = httpconn.getResponseCode();
-			if (rc != HttpConnection.HTTP_OK)
-				throw new IOException("HTTP response code: " + rc);
-
-			is = httpconn.openInputStream();
-			if((imageData = IOUtilities.streamToBytes(is)) == null)
-				throw new IOException("[bitmap] imageData Error");
-	
-			return Bitmap.createBitmapFromBytes(imageData, 0, -1, Bitmap.SCALE_TO_FIT);
-
-		} finally {
-			if(httpconn != null){ 
-				try {
-					httpconn.close();
-				} catch (IOException e) {} 
+			ProgramParserHandler _handler = new ProgramParserHandler();
+			SAXParserImpl saxparser = new SAXParserImpl();
+			
+			HttpConnection httpconn = null;
+			DataInputStream dis = null;
+			try {
+				httpconn = Network.doGet(_connfactory, url);
+				dis = httpconn.openDataInputStream();
+				saxparser.parse(dis, _handler);
+				
+				return _handler.getResult();
+			
+			} catch (Exception e) {
+				errorlog += e.toString() + "\n";
+			} finally {
+				if(dis != null){ dis.close(); dis = null; }
+				if(httpconn != null){ httpconn.close(); httpconn = null; }
 			}
 		}
-	} //GetWebBitmap
+		throw new Exception(errorlog);
+	} //getProgramInfo()
 	
 	
-	private void updateStatus(String val)
+	public static Hashtable getStationListAndAreaName(ConnectionFactory _connfactory, final String areaID) throws Exception
+	{
+		// 引数チェック
+		if(_connfactory == null) { throw new NullPointerException("ConnectionFactory"); }
+		if(areaID == null) { throw new NullPointerException("areaID"); }
+		if(areaID.length() == 0) { throw new IllegalArgumentException("areaID"); }
+		
+		// 有効な通信経路があるか確認
+		if(!Network.isCoverageSufficient()) { throw new Exception("OutOfCoverage"); }
+				
+		String errorlog = "EPG::getStationListAndAreaName()\n";
+		
+		for(int i=0; i<NUM_OF_TRIALS; i++)
+		{
+			HttpConnection httpconn = null;
+			DataInputStream dis = null;
+			
+			try {
+				final String url = "http://radiko.jp/v2/station/list/" + areaID + ".xml";
+				
+				StationParserHandler _station = new StationParserHandler();
+				SAXParserImpl saxparser = new SAXParserImpl();
+				
+				//
+				httpconn = Network.doGet(_connfactory, url);
+				
+				dis = httpconn.openDataInputStream();
+				saxparser.parse(dis, _station);
+				
+				Hashtable out= new Hashtable();
+				out.put("stationList", _station.getStationList());
+				out.put("areaName", _station.getAreaName());
+				
+				return out;
+				
+			} catch (Exception e) {
+				errorlog += e.toString() + "\n";
+			} finally {
+				if(dis != null){ dis.close(); dis = null;}
+				if(httpconn != null){ httpconn.close(); httpconn = null;}
+			}
+		}
+		throw new Exception(errorlog);
+	} //getStationListAndAreaName()
+	
+	
+	public static Program[] getTimetable(ConnectionFactory _connfactory, final String areaID, final String stationID) throws Exception
+	{
+		// 引数チェック
+		if(_connfactory == null) { throw new NullPointerException("ConnectionFactory"); }
+		if(areaID == null) { throw new NullPointerException("areaID"); }
+		if(areaID.length() == 0) { throw new IllegalArgumentException("areaID"); }
+		if(stationID == null) { throw new NullPointerException("stationID"); }
+		if(stationID.length() == 0) { throw new IllegalArgumentException("stationID"); }
+		
+		final String url = "http://radiko.jp/v2/api/program/today?area_id=" + areaID;
+		
+		// 番組情報を取得
+		Hashtable tmp = getProgramInfo(_connfactory, url);
+		
+		// stationIDで指定された放送局の番組情報を取得
+		Program[] out = (Program[])tmp.get(stationID);
+		
+		if(out == null) { return null; }
+		
+		return out;
+	} //getTimetable()
+	
+	
+	/*private void updateStatus(String val)
 	{
 		synchronized (UiApplication.getEventLock())
 		{
 			_app.updateStatus("[EPG] " + val);
 		}
+	}*/
+} //EPG	
+	
+class Station
+{
+	private Program[] programs = null;
+	private Program[] timetable = null;
+	private String ascii_name = "";
+	private String id = "";
+	private String logo_url = "";
+	private String name = "";
+	private Bitmap logo = null;
+	
+	
+	public Program[] getPrograms() { return this.programs; }
+	public Program[] getTimetable() { return this.timetable; }
+	public String getASCIIName() { return this.ascii_name; }
+	public String getID() { return this.id; }
+	public Bitmap getLogo() { return this.logo; }
+	public String getLogoURL() { return this.logo_url; }
+	public String getName() { return this.name; }
+	
+	
+	public void setPrograms(Program[] programs)
+	{
+		// 引数チェック
+		if(programs == null) { throw new NullPointerException("programs"); }
+		if(programs.length == 0) { throw new IllegalArgumentException("programs"); }
+		
+		this.programs = programs;
+	} //setPrograms()
+	
+	
+	public void setTimetable(Program[] timetable)
+	{
+		// 引数チェック
+		if(timetable == null) { throw new NullPointerException("timetable"); }
+		if(timetable.length == 0) { throw new IllegalArgumentException("timetable"); }
+		
+		this.timetable = timetable;
+	} //setPrograms()
+	
+	
+	public void setASCIIName(String ascii_name)
+	{
+		// 引数チェック
+		if(ascii_name == null) { throw new NullPointerException("ascii_name"); }
+		if(ascii_name.length() == 0) { throw new IllegalArgumentException("ascii_name"); }
+		
+		this.ascii_name = ascii_name;
+	} //setASCIIName()
+	
+	
+	public void setID(String id)
+	{
+		// 引数チェック
+		if(id == null) { throw new NullPointerException("id"); }
+		if(id.length() == 0) { throw new IllegalArgumentException("id"); }
+		
+		this.id = id;
+	} //setID()
+	
+	
+	public void setLogo(Bitmap logo)
+	{
+		// 引数チェック
+		if(logo == null) { throw new NullPointerException("logo"); }
+		
+		this.logo = logo;
+	} //setLogoURL()
+	
+	
+	public void setLogoURL(String logo_url)
+	{
+		// 引数チェック
+		if(logo_url == null) { throw new NullPointerException("logo_url"); }
+		if(logo_url.length() == 0) { throw new IllegalArgumentException("logo_url"); }
+		
+		this.logo_url = logo_url;
+	} //setLogoURL()
+	
+	
+	public void setName(String name)
+	{
+		// 引数チェック
+		if(name == null) { throw new NullPointerException("name"); }
+		if(name.length() == 0) { throw new IllegalArgumentException("name"); }
+		
+		this.name = name;
+	} //setName()
+}
+
+
+class Program
+{
+	private String description = "";
+	private String info = "";
+	private String pfm = "";
+	private String time = "";
+	private String title = "";
+	private String url = "";
+	
+	
+	public String getDescription() { return this.description; }
+	public String getInfo() { return this.info; }
+	public String getPfm() { return this.pfm; }
+	public String getTime() { return this.time; }
+	public String getTitle() { return this.title; }
+	public String getUrl() { return this.url; }
+	
+	
+	public void setDescription(String description)
+	{
+		// 引数チェック
+		if(description == null) { throw new NullPointerException("description"); }
+		
+		this.description = description;
+	} //setDescription()
+	
+	
+	public void setInfo(String info)
+	{
+		// 引数チェック
+		if(info == null) { throw new NullPointerException("info"); }
+		
+		this.info = info;
+	} //setInfo()
+	
+	
+	public void setPfm(String pfm)
+	{
+		// 引数チェック
+		if(pfm == null) { throw new NullPointerException("pfm"); }
+		
+		this.pfm = pfm;
+	} //setPfm()
+	
+	
+	public void setTime(String time)
+	{
+		// 引数チェック
+		if(time == null) { throw new NullPointerException("time"); }
+		
+		this.time = time;
+	} //setTime()
+	
+	
+	public void setTitle(String title)
+	{
+		// 引数チェック
+		if(title == null) { throw new NullPointerException("title"); }
+		
+		this.title = title;
+	} //setTitle()
+	
+	
+	public void setUrl(String url)
+	{
+		// 引数チェック
+		if(url == null) { throw new NullPointerException("url"); }
+		
+		this.url = url;
+	} //setUrl()
+	
+}
+
+
+class StationParserHandler extends DefaultHandler
+{
+	/*
+	 * <stations area_id="JP13" area_name="TOKYO JAPAN">
+	 *  <station>
+	 *   <id>TBS</id>
+	 *   <name>TBSラジオ</name>
+	 *   <ascii_name>TBS RADIO</ascii_name>
+	 *   <href>http://www.tbs.co.jp/radio/</href>
+	 *   <logo_xsmall>http://radiko.jp/station/logo/TBS/logo_xsmall.png</logo_xsmall>
+	 *   <logo_small>http://radiko.jp/station/logo/TBS/logo_small.png</logo_small>
+	 *   <logo_medium>http://radiko.jp/station/logo/TBS/logo_medium.png</logo_medium>
+	 *   <logo_large>http://radiko.jp/station/logo/TBS/logo_large.png</logo_large>
+	 *   <logo width="124" height="40">http://radiko.jp/v2/static/station/logo/TBS/124x40.png</logo>
+	 *   <logo width="344" height="80">http://radiko.jp/v2/static/station/logo/TBS/344x80.png</logo>
+	 *   <logo width="688" height="160">http://radiko.jp/v2/static/station/logo/TBS/688x160.png</logo>
+	 *   <logo width="172" height="40">http://radiko.jp/v2/static/station/logo/TBS/172x40.png</logo>
+	 *   <logo width="224" height="100">http://radiko.jp/v2/static/station/logo/TBS/224x100.png</logo>
+	 *   <logo width="448" height="200">http://radiko.jp/v2/static/station/logo/TBS/448x200.png</logo>
+	 *   <logo width="112" height="50">http://radiko.jp/v2/static/station/logo/TBS/112x50.png</logo>
+	 *   <logo width="168" height="75">http://radiko.jp/v2/static/station/logo/TBS/168x75.png</logo>
+	 *   <logo width="258" height="60">http://radiko.jp/v2/static/station/logo/TBS/258x60.png</logo>
+	 *   <feed>http://radiko.jp/station/feed/TBS.xml</feed>
+	 *   <banner>http://radiko.jp/res/banner/TBS/20130329155819.jpg</banner>
+	 *  </station>
+	 *  ...
+	 * </stations>
+	 * 
+	 */
+	
+	
+	private Station _station = null;
+	private Vector _stations = new Vector();
+	private String areaName = "";
+	private Stack tags = new Stack();
+	
+	
+	public StationParserHandler()
+	{
+		// DO NOTHING
 	}
 	
-	private class StationParserHandler extends DefaultHandler
-	{
-		private Stack stack = new Stack();
-		private Hashtable ht;
-		
-		public void startElement(String uri, String localName, String qname, Attributes attributes) throws SAXException
-		{
-			stack.push(qname);
-			
-			// 現在のエリアネームを取得
-			if(qname.equals("stations"))
-			{
-				areaName = attributes.getValue("area_name");
-			}
-			
-			if(qname.equals("station"))
-			{
-				ht = null;
-				ht = new Hashtable();
-			}
-			
-		} //startElement()
-		
-		public void endElement(String uri, String localName, String qName) throws SAXException
-		{
-			if(qName.equals("station"))
-			{
-				stationsInfoV.addElement(ht);
-			}
-			
-			stack.pop();
-		} //endElement()
-		
-		public void characters(char[] ch, int start, int length) throws SAXException 
-		{
-			if(!stack.peek().equals("logo"))
-			{
-				String element = new String(ch, start, length);
-				//updateStatus("[STP] " + element);
-				ht.put(stack.peek(), element);
-			}
-		} //characters()
-	} //StationParserHandler
 	
-	
-	private class ProgramParserHandler extends DefaultHandler
+	public void startElement(String uri, String localName, String qname, Attributes attributes) throws SAXException
 	{
-		private  Hashtable ht = new Hashtable();
-		private Stack stack = new Stack();
-		private int num = 0;
-		private boolean isFirstProgtag;
+		// タグ名を記憶
+		tags.push(qname);
 		
-
-		public ProgramParserHandler()
+		// 現在のエリアネームを取得
+		if(qname.equals("stations"))
 		{
-			// DO NOTHING
+			this.areaName = attributes.getValue("area_name");
 		}
 		
-		public void startElement(String uri, String localName, String qname, Attributes attributes) throws SAXException
+		// 放送局情報を取得開始
+		if(qname.equals("station"))
 		{
-			stack.push(qname);
+			_station = new Station();
+		}
 		
-			if(qname.equals("station"))
-			{
-				//updateStatus("startElement() " + qname);
-				isFirstProgtag = true;
-			}
-		
-			if(qname.equals("prog"))
-			{
-				ht = null;
-				ht = new Hashtable();
-				
-				StringBuffer ftl = new StringBuffer(attributes.getValue("ftl"));
-				ftl.insert(2, ":");
-				StringBuffer tol = new StringBuffer(attributes.getValue("tol"));
-				tol.insert(2, ":");
+	} //startElement()
 	
-				ht.put("time", ftl.toString() + " - " + tol.toString());
-			}
-		} //startElement()
-	
-		
-		public void endElement(String uri, String localName, String qName) throws SAXException
+	public void endElement(String uri, String localName, String qName) throws SAXException
+	{
+		if(qName.equals("station"))
 		{
-			if(qName.equals("prog"))
-			{
-				//updateStatus("endElement() " + qName);
-			
-				Hashtable station = (Hashtable)stationsInfoV.elementAt(num);
-				if(isFirstProgtag)
-					station.put("prog_now", ht);
-				else
-					station.put("prog_next", ht);
-			
-				isFirstProgtag = false;
-			}
+			_stations.addElement(_station);
+			_station = null;
+		}
 		
-			if(qName.equals("station"))
-			{
-				//updateStatus("endElement() " + qName);
-			
-				num++;
-			}
-		
-			stack.pop();
-		} //endElement()
+		// タグ名を忘れる。
+		tags.pop();
+	} //endElement()
 	
-		public void characters(char[] ch, int start, int length) throws SAXException 
-		{
-			if(stack.peek().equals("title"))
-			{
-				String element = new String(ch, start, length);
-				//updateStatus("characters() " + element);
-				ht.put("title", element);
-			}
+	public void characters(char[] ch, int start, int length) throws SAXException 
+	{
+		String tag = (String)tags.peek();
 		
-			if(stack.peek().equals("pfm"))
-			{
-				String element = new String(ch, start, length);
-				//updateStatus("characters() " + element);
-				ht.put("pfm", element);
-			}
+		if(tag.equals("id"))
+		{
+			String id = new String(ch, start, length);
+			_station.setID(id);
+		}
+		
+		
+		if(tag.equals("name"))
+		{
+			String name = new String(ch, start, length);
+			_station.setName(name);
+		}
+		
+		
+		if(tag.equals("ascii_name"))
+		{
+			String ascii_name = new String(ch, start, length);
+			_station.setASCIIName(ascii_name);
+		}
+		
+		
+		if(tag.equals("logo_medium"))
+		{
+			String logo_medium = new String(ch, start, length);
+			_station.setLogoURL(logo_medium);
+		}
+	} //characters()
+	
+	
+	public String getAreaName()
+	{
+		return this.areaName;
+	}
+	
+	
+	public Station[] getStationList()
+	{
+		Station[] out = new Station[_stations.size()];
+		
+		for(int i=0; i<_stations.size(); i++)
+		{
+			out[i] = (Station)_stations.elementAt(i);
+		}
+		
+		return out;
+	} //getStationList()
+	
+} //StationParserHandler
+
+
+class ProgramParserHandler extends DefaultHandler
+{
+	private Vector _programs = null;
+	private Program _program = null;
+	private String processing_station_ID = "";
+	private Hashtable out = new Hashtable();
+	private Stack tags = new Stack();
+	
+	
+	public ProgramParserHandler()
+	{
+		// DO NOTHING 
+	}
+	
+	
+	public void startElement(String uri, String localName, String qname, Attributes attributes) throws SAXException
+	{
+		tags.push(qname);
+	
+		if(qname.equals("station"))
+		{
+			// ステーションのプログラム情報を保存するベクターを作成
+			_programs = new Vector();
 			
-			if(stack.peek().equals("desc"))
-			{
-				String element = new String(ch, start, length);
-				//updateStatus("characters() " + element);
-				ht.put("desc", element);
-			}
+			// 処理するステーションのIDを保存
+			processing_station_ID = attributes.getValue("id");
+		}
+	
+		if(qname.equals("prog"))
+		{
+			StringBuffer ftl = new StringBuffer(attributes.getValue("ftl"));
+			ftl.insert(2, ":");
+			StringBuffer tol = new StringBuffer(attributes.getValue("tol"));
+			tol.insert(2, ":");
 			
-			if(stack.peek().equals("info"))
-			{
-				String element = new String(ch, start, length);
-				//updateStatus("characters() " + element);
-				ht.put("info", element);
-			}
 			
-			if(stack.peek().equals("url"))
-			{
-				String element = new String(ch, start, length);
-				//updateStatus("characters() " + element);
-				ht.put("url", element);
-			}
+			// プログラム情報を保存するクラスを作成
+			_program = new Program();
 			
-		} //characters()
-	 } //ProgramParserHandler
-} //EPG
+			// 放送時間を保存
+			_program.setTime(ftl.toString() + " - " + tol.toString());
+		}
+	} //startElement()
+
+	
+	public void endElement(String uri, String localName, String qName) throws SAXException
+	{
+		if(qName.equals("prog"))
+		{
+			//updateStatus("endElement() " + qName);
+			
+			// 取得したプログラム情報を一時保存
+			_programs.addElement(_program);
+			_program = null;
+		}
+	
+		if(qName.equals("station"))
+		{
+			//updateStatus("endElement() " + qName);
+			
+			// ベクターから配列に変換
+			Program[] out_val = new Program[_programs.size()];
+			for(int i=0; i<_programs.size(); i++)
+			{
+				out_val[i] = (Program)_programs.elementAt(i);
+			}
+			_programs = null;
+			
+			//
+			out.put(processing_station_ID, out_val);
+		}
+	
+		tags.pop();
+	} //endElement()
+
+	public void characters(char[] ch, int start, int length) throws SAXException 
+	{
+		String tag = (String)tags.peek();
+		
+		if(tag.equals("title"))
+		{
+			String element = new String(ch, start, length);
+			_program.setTitle(element);
+		}
+	
+		if(tag.equals("pfm"))
+		{
+			String element = new String(ch, start, length);
+			_program.setPfm(element);
+		}
+		
+		if(tag.equals("desc"))
+		{
+			String element = new String(ch, start, length);
+			_program.setDescription(element);
+			
+		}
+		
+		if(tag.equals("info"))
+		{
+			String element = new String(ch, start, length);
+			_program.setInfo(element);
+		}
+		
+		if(tag.equals("url"))
+		{
+			String element = new String(ch, start, length);
+			_program.setUrl(element);
+		}
+		
+	} //characters()
+	
+	
+	public Hashtable getResult()
+	{
+		return out;
+	}
+ } //ProgramParserHandler

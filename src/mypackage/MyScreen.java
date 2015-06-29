@@ -21,8 +21,6 @@
 
 package mypackage;
 
-import java.util.Enumeration;
-import java.util.Hashtable;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Vector;
@@ -30,7 +28,6 @@ import java.util.Vector;
 import net.rim.device.api.command.Command;
 import net.rim.device.api.command.CommandHandler;
 import net.rim.device.api.command.ReadOnlyCommandMetadata;
-import net.rim.device.api.media.MediaActionHandler;
 import net.rim.device.api.system.Bitmap;
 import net.rim.device.api.system.Characters;
 import net.rim.device.api.system.Display;
@@ -40,10 +37,8 @@ import net.rim.device.api.ui.Font;
 import net.rim.device.api.ui.Graphics;
 import net.rim.device.api.ui.Manager;
 import net.rim.device.api.ui.MenuItem;
-import net.rim.device.api.ui.TransitionContext;
 import net.rim.device.api.ui.Ui;
 import net.rim.device.api.ui.UiApplication;
-import net.rim.device.api.ui.UiEngineInstance;
 import net.rim.device.api.ui.XYEdges;
 import net.rim.device.api.ui.XYRect;
 import net.rim.device.api.ui.component.BasicEditField;
@@ -51,6 +46,7 @@ import net.rim.device.api.ui.component.BitmapField;
 import net.rim.device.api.ui.component.Dialog;
 import net.rim.device.api.ui.component.GaugeField;
 import net.rim.device.api.ui.component.LabelField;
+import net.rim.device.api.ui.component.Menu;
 import net.rim.device.api.ui.component.StandardTitleBar;
 import net.rim.device.api.ui.component.progressindicator.ActivityIndicatorController;
 import net.rim.device.api.ui.component.progressindicator.ActivityIndicatorModel;
@@ -84,7 +80,6 @@ public class MyScreen extends MainScreen
 	
 	private TableModel _tableModel;
 	private TableView _tableView;
-	private TableController _controller;
 	private DataTemplate dataTemplate;
 	
 	private VerticalFieldManager _tab1Manager;
@@ -97,8 +92,6 @@ public class MyScreen extends MainScreen
 	private ActivityIndicatorView _aiView;
 	
 	private boolean isForcedTermination = false;
-	private boolean isContextMenuOpened = false;
-	private boolean isMenuOpened = false;
 	
 	
 	public MyScreen()
@@ -130,10 +123,10 @@ public class MyScreen extends MainScreen
 		//_tableView.setDataTemplateFocus(BackgroundFactory.createSolidTransparentBackground(Color.LIGHTBLUE, 125));
 		_tableView.setDataTemplateFocus(BackgroundFactory.createSolidBackground(Color.LIGHTBLUE));
 		
-		_controller = new TableController(_tableModel, _tableView, TableController.ROW_FOCUS);
+		TableController _controller = new TableController(_tableModel, _tableView, TableController.ROW_FOCUS);
 		//_controller.setFocusPolicy(TableController.ROW_FOCUS);
-		
 		_tableView.setController(_controller);
+		_controller = null;
 		
 		
 		dataTemplate = new DataTemplate(_tableView, 1, 1)
@@ -142,7 +135,6 @@ public class MyScreen extends MainScreen
 			{
 				Object[] data = (Object[]) _tableModel.getRow(modelRowIndex);
 				Field[] fields = new Field[data.length];
-				
 				// LOGO
 				//fields[0] = new BitmapField((Bitmap) data[0]);
 				fields[0] = (HorizontalFieldManager)data[0];
@@ -171,6 +163,24 @@ public class MyScreen extends MainScreen
 		
 		add(_tableView);
 		
+		
+		//---- ActivityIndicator --------------------------------------------- //
+		_aiView = new ActivityIndicatorView(Field.USE_ALL_WIDTH);
+		ActivityIndicatorModel aiModel = new ActivityIndicatorModel();
+		ActivityIndicatorController aiController = new ActivityIndicatorController();
+		
+		_aiView.setController(aiController);
+		_aiView.setModel(aiModel);
+		_aiView.setMargin(5, 0, 5, 0);
+		
+		aiController.setModel(aiModel);
+		aiController.setView(_aiView);
+		aiModel.setController(aiController);
+		Bitmap aiBitmap = Bitmap.getBitmapResource("spinner2.png");
+		
+		_aiView.createActivityImageField(aiBitmap, 6, Field.FIELD_HCENTER);
+		
+		
 		//---- ログ表示用フィールド --------------------------------------------- //
 		_statusField = new BasicEditField(Field.NON_FOCUSABLE);
 		_tab1Manager = new VerticalFieldManager(Manager.VERTICAL_SCROLL);
@@ -189,14 +199,8 @@ public class MyScreen extends MainScreen
 		manager.add(_gaugeField);
 		_popup = new PopupScreen(manager);
 		
-	} //StationsScreen2()
+	} //MyScreen()
 	
-	public boolean onMenu(int instance)
-	{
-		updateStatus("onMenu()");
-		isMenuOpened = true;
-		return super.onMenu(instance);
-	}
 	
 	protected boolean keyChar(char c, int status, int time)
 	{
@@ -205,160 +209,90 @@ public class MyScreen extends MainScreen
 			case 'i':
 			{
 				// 現在の番組情報を表示
-				showProgScreen(ProgInfoScreen.CURRENT);
+				Station tmp_station = _app.getStationByIndex(_tableView.getRowNumberWithFocus());
+				Program[] tmp_progs = tmp_station.getPrograms();
+				_app.showProgScreen(tmp_progs[0]);
 				break;
 			}
 			case 'n':
 			{
 				// 次の番組情報を表示
-				showProgScreen(ProgInfoScreen.NEXT);
+				Station tmp_station = _app.getStationByIndex(_tableView.getRowNumberWithFocus());
+				Program[] tmp_progs = tmp_station.getPrograms();
+				_app.showProgScreen(tmp_progs[1]);
 				break;
 			}
 			case 'r':
 			{
 				// 更新
-				getProgramInfo();
+				_app.updateProgramInfo();
 				break;
 			}
 			case 't':
 			{
 				// 番組表を表示
-				showEPGScreen();
+				_app.showEPGScreen(_tableView.getRowNumberWithFocus());
 				break;
 			}
 			case Characters.SPACE:
 			{
 				// 再生、停止
-				doPlayStop();
+				_app.doPlayStop(_tableView.getRowNumberWithFocus());
 				break;
 			}
 		}
 		return super.keyChar(c, status, time);
 	}
 	
-	protected void onExposed()
+	
+	protected void makeMenu(Menu menu, int instance)
 	{
-		//updateStatus("onExposed()");
-		updateTitleBarTitle(null);
+		super.makeMenu(menu, instance);
 		
-		if(!isContextMenuOpened && !isMenuOpened)
-		{
-			// 番組情報を更新
-			//getProgramInfo();
-		}
+		MenuItem _prog = new MenuItem(new StringProvider("Earpiece ON/OFF"), 0x00020000, 0);
+		_prog.setCommand(new Command(
+				new CommandHandler()
+				{
+					public void execute(ReadOnlyCommandMetadata metadata, Object context)
+					{
+						_app.setAudioPath();
+					}
+				}
+				));
+		menu.add(_prog);
 		
-		isContextMenuOpened = false;
-		isMenuOpened =false;
 		
-	} //onExposed()
+		MenuItem _tester = new MenuItem(new StringProvider("更新"), 0x00020000, 1);
+		_tester.setCommand(new Command(
+				new CommandHandler()
+				{
+					public void execute(ReadOnlyCommandMetadata metadata, Object context)
+					{
+						_app.updateProgramInfo();
+					}
+				}
+				));
+		menu.add(_tester);
+		
+	} //makeMenu()
 	
 	
 	/* To override the default functionality that prompts the user to save changes before the application closes, 
 	 * override the MainScreen.onSavePrompt() method. In the following code sample, the return value is true which 
 	 * indicates that the application does not prompt the user before closing.
 	 */ 
-	protected boolean onSavePrompt()
+	/*protected boolean onSavePrompt()
 	{
 		return true;
-	}
+	}*/
+	
 	
 	protected void onUiEngineAttached(boolean attached)
 	{
 		super.onUiEngineAttached(attached);
-		if(attached)
-		{
-			//updateStatus("Attached!! (SS2)");
-			Thread _thread = new Thread(new Runnable()
-			{
-				public void run()
-				{
-					init_setupTransport();
-					init_doAuth();
-					init_getStationList();
-					_app._mediaActions.Init();
-					init_makeMenu();
-					
-					synchronized (UiApplication.getEventLock())
-					{
-						setStatus(null);
-					}
-					
-					Vector stationsInfoV = _app._epg.GetStationsInfoV();
-					// マネージャーバージョン 
-					for(Enumeration e = stationsInfoV.elements(); e.hasMoreElements(); )
-					{
-						final Hashtable station = (Hashtable) e.nextElement();
-						//updateStatus("Vec: " + station.get("id").toString());
-						
-						// LeftColumn
-						VerticalFieldManager vManager_left = new VerticalFieldManager(VerticalFieldManager.FIELD_VCENTER);
-						
-						BitmapField bitmapField = new BitmapField((Bitmap)station.get("station_logo"), Field.NON_FOCUSABLE);
-						vManager_left.add(bitmapField);
-						
-						// RightColumn
-						VerticalFieldManager vManager_right = new VerticalFieldManager(VerticalFieldManager.FIELD_VCENTER);
-						Font sfont = Font.getDefault().derive(Font.PLAIN, (Font.getDefault().getHeight(Ui.UNITS_pt) - 1), Ui.UNITS_pt);
-						
-						// StaionNAME
-						LabelField _stationName = new LabelField(station.get("name"), Field.NON_FOCUSABLE | LabelField.ELLIPSIS);        	
-						_stationName.setFont(Font.getDefault());
-						_stationName.setPadding(10, 10, 0, 10);
-						vManager_right.add(_stationName);
-						
-						// ProgramTIME
-						LabelField _progTime = new LabelField("", Field.NON_FOCUSABLE | LabelField.ELLIPSIS)
-						{
-							protected void paint(Graphics g)
-							{
-								g.setColor(Color.GRAY);
-								super.paint(g);
-							}
-						};
-						_progTime.setFont(sfont);
-						_progTime.setPadding(0, 10, 0, 10);
-						vManager_right.add(_progTime);
-						
-						// ProgramNAME
-						LabelField _progNAME = new LabelField("", Field.NON_FOCUSABLE | LabelField.ELLIPSIS)
-						{
-							protected void paint(Graphics g)
-							{
-								g.setColor(Color.GRAY);
-								super.paint(g);
-							}
-						};        	
-						_progNAME.setFont(sfont);
-						_progNAME.setPadding(0, 10, 0, 10);
-						vManager_right.add(_progNAME);
-						
-						// ProgramPFM
-						LabelField _progPFM = new LabelField("", Field.NON_FOCUSABLE | LabelField.ELLIPSIS)
-						{
-							protected void paint(Graphics g)
-							{
-								g.setColor(Color.GRAY);
-								super.paint(g);
-							}
-						};
-						_progPFM.setFont(sfont);
-						_progPFM.setPadding(0, 10, 10, 10);
-						vManager_right.add(_progPFM);
-						
-						HorizontalFieldManager hManager = new HorizontalFieldManager(Manager.USE_ALL_WIDTH);
-						hManager.add(vManager_left);
-						hManager.add(vManager_right);
-						_tableModel.addRow(new Object[]{hManager});
-					}
-					//add(outerManager);
-					getProgramInfo();
-				} //run()
-			});
-			_thread.start();
-			
-		}
-		else
-		{
+		if(attached) {
+			_app.runApp();
+		} else {
 			//updateStatus("Deattached!!");
 		}
 	} //onUiEngineAttached()
@@ -387,13 +321,10 @@ public class MyScreen extends MainScreen
 				UiApplication.getUiApplication().invokeLater (new Runnable() {
 					public void run() 
 					{
-						if(getField(0).equals(_tableView))
-						{
+						if(getField(0).equals(_tableView)) {
 							deleteAll();
 							add(_tab1Manager);
-						}
-						else
-						{
+						} else {
 							deleteAll();
 							add(_tableView);
 						}
@@ -404,6 +335,79 @@ public class MyScreen extends MainScreen
 		return super.openProductionBackdoor(backdoorCode);
 	} //openProductionBackdoor()
 	
+	
+	public void addContents(Station[] stations)
+	{
+		//　引数チェック
+		if(stations == null) { throw new NullPointerException("stations"); }
+		
+		for(int i=0; i<stations.length; i++)
+		{
+			Station station = stations[i];
+			
+			// LeftColumn
+			VerticalFieldManager vManager_left = new VerticalFieldManager(VerticalFieldManager.FIELD_VCENTER);
+			
+			BitmapField bitmapField = new BitmapField(station.getLogo(), Field.NON_FOCUSABLE);
+			vManager_left.add(bitmapField);
+			
+			// RightColumn
+			VerticalFieldManager vManager_right = new VerticalFieldManager(VerticalFieldManager.FIELD_VCENTER);
+			Font sfont = Font.getDefault().derive(Font.PLAIN, (Font.getDefault().getHeight(Ui.UNITS_pt) - 1), Ui.UNITS_pt);
+			
+			// StaionNAME
+			LabelField _stationName = new LabelField(station.getName(), Field.NON_FOCUSABLE | LabelField.ELLIPSIS);
+			_stationName.setFont(Font.getDefault());
+			_stationName.setPadding(10, 10, 0, 10);
+			vManager_right.add(_stationName);
+			
+			// ProgramTIME
+			LabelField _progTime = new LabelField("", Field.NON_FOCUSABLE | LabelField.ELLIPSIS)
+			{
+				protected void paint(Graphics g)
+				{
+					g.setColor(Color.GRAY);
+					super.paint(g);
+				}
+			};
+			_progTime.setFont(sfont);
+			_progTime.setPadding(0, 10, 0, 10);
+			vManager_right.add(_progTime);
+			
+			// ProgramNAME
+			LabelField _progNAME = new LabelField("", Field.NON_FOCUSABLE | LabelField.ELLIPSIS)
+			{
+				protected void paint(Graphics g)
+				{
+					g.setColor(Color.GRAY);
+					super.paint(g);
+				}
+			};        	
+			_progNAME.setFont(sfont);
+			_progNAME.setPadding(0, 10, 0, 10);
+			vManager_right.add(_progNAME);
+			
+			// ProgramPFM
+			LabelField _progPFM = new LabelField("", Field.NON_FOCUSABLE | LabelField.ELLIPSIS)
+			{
+				protected void paint(Graphics g)
+				{
+					g.setColor(Color.GRAY);
+					super.paint(g);
+				}
+			};
+			_progPFM.setFont(sfont);
+			_progPFM.setPadding(0, 10, 10, 10);
+			vManager_right.add(_progPFM);
+			
+			HorizontalFieldManager hManager = new HorizontalFieldManager(Manager.USE_ALL_WIDTH);
+			hManager.add(vManager_left);
+			hManager.add(vManager_right);
+			_tableModel.addRow(new Object[]{hManager});
+		}
+	}
+	
+	
 	// Overrides: close() in Screen
 	public void close()
 	{
@@ -411,10 +415,7 @@ public class MyScreen extends MainScreen
 		{
 			int select = Dialog.ask(Dialog.D_OK_CANCEL, "終了してもよろしいですか?", Dialog.NO);
 			
-			if(select == Dialog.NO)
-			{
-				return;
-			}
+			if(select == Dialog.NO) { return; }
 		}
 		
 		Runnable runnable = _onCloseRunnable;
@@ -429,17 +430,24 @@ public class MyScreen extends MainScreen
 		super.close();
 	} //close()
 	
+	
+	public void hideActivityIndicator()
+	{
+		synchronized (UiApplication.getEventLock()) 
+		{
+			this.setStatus(null);
+		}
+	} //hideActivityIndicator()
+	
+	
 	public void popupVolumeVal(int val)
 	{
-		if(_popup.equals(UiApplication.getUiApplication().getActiveScreen()))
-		{
+		if(_popup.equals(UiApplication.getUiApplication().getActiveScreen())) {
 			_timer.cancel();
 			_gaugeField.setValue(val);
 			_timer  = new Timer();
 			_timer.schedule(new CountDown(), 700);
-		}
-		else
-		{
+		} else {
 			_gaugeField.setValue(val);
 			
 			UiApplication.getUiApplication().invokeLater(new Runnable()
@@ -455,10 +463,63 @@ public class MyScreen extends MainScreen
 		}
 	} //popupVolumeVal()
 	
+	
 	public void setOnCloseRunnable( Runnable runnable )
 	{
 		_onCloseRunnable = runnable;
 	}
+	
+	
+	public void setForcedTermination(boolean val)
+	{
+		this.isForcedTermination = val;
+	}
+	
+	
+	public void showActivityIndicator()
+	{
+		synchronized (UiApplication.getEventLock()) 
+		{
+			this.setStatus(_aiView);
+		}
+	} //showActivityIndicator()
+	
+	
+	public void updateProgramInfo(Station[] stations)
+	{
+		// 引数チェック
+		if(stations == null) { throw new NullPointerException("stations"); }
+		
+		
+		for(int i=0; i<stations.length; i++)
+		{
+			Station tmp_station = stations[i];
+			
+			// GET OuterHFM
+			Field[] fields = dataTemplate.getDataFields(i);
+			
+			//
+			HorizontalFieldManager outerHFM = (HorizontalFieldManager) fields[0];
+			
+			// GET RightVFM
+			VerticalFieldManager rightVFM = (VerticalFieldManager) outerHFM.getField(1);
+			
+			// ステーションのプログラム情報を取得
+			Program[] tmp_progs = tmp_station.getPrograms();
+			
+			// 現在のプログラムの情報は、配列の一番始めに保存されている。
+			Program tmp_prog = tmp_progs[0];
+			
+			// SET NewData
+			synchronized (UiApplication.getEventLock()) 
+			{
+				((LabelField)rightVFM.getField(1)).setText(tmp_prog.getTime());
+				((LabelField)rightVFM.getField(2)).setText(tmp_prog.getTitle());
+				((LabelField)rightVFM.getField(3)).setText(tmp_prog.getPfm());
+			}
+		}
+	} //updateProgramInfo()
+	
 	
 	public void updateStatus(final String message)
 	{
@@ -471,6 +532,7 @@ public class MyScreen extends MainScreen
 		});
 	} //updateStatus()
 	
+	
 	public void updateStatusField(String val)
 	{
 		LabelField _tmpField = new LabelField(val, Field.FIELD_HCENTER);
@@ -482,265 +544,22 @@ public class MyScreen extends MainScreen
 		}
 	} //updateStatusField()
 	
+	
 	public void updateTitleBarTitle(String val)
 	{
-		if(val != null)
-		{
+		if(val != null) {
 			_titleBar.addTitle(val);
-		}
-		else
-		{
+		} else {
 			synchronized (UiApplication.getEventLock()) 
 			{
-				if(_app._mediaActions.isPlaying())
-					_titleBar.addTitle(_app._epg.getCurrentStationName());
+				if(_app.isPlaying())
+					_titleBar.addTitle(_app.getCurrentStationName());
 				else
 					_titleBar.addTitle("");
 			}
 		}
 	} //updateTitleBarTitle()
 	
-	private void doPlayStop()
-	{
-		int row_number_with_focus = _tableView.getRowNumberWithFocus();
-		int current_station = _app._epg.GetCurrentStation();
-		
-		if(_app._mediaActions.isOperating())
-		{
-			Dialog.alert("バッファ中...");
-			return;
-		}
-		
-		// 選択された放送局を、現在の放送局に登録
-		_app._epg.SetCurrentStation(row_number_with_focus);
-		
-		// 再生、停止を実行
-		if(_app._mediaActions.isPlaying())
-		{
-			// 選択した放送局と、再生中の放送局を比較して実行する内容を決める
-			if(row_number_with_focus != current_station)
-			{
-				_app._mediaActions.mediaAction(MediaActionHandler.MEDIA_ACTION_STOP, MediaActionHandler.SOURCE_FOREGROUND_KEY, null);
-				_app._mediaActions.mediaAction(MediaActionHandler.MEDIA_ACTION_PLAY, MediaActionHandler.SOURCE_FOREGROUND_KEY, null);
-			}
-			else
-			{
-				_app._mediaActions.mediaAction(MediaActionHandler.MEDIA_ACTION_STOP, MediaActionHandler.SOURCE_FOREGROUND_KEY, null);
-			}
-		}
-		else
-		{
-			_app._mediaActions.mediaAction(MediaActionHandler.MEDIA_ACTION_PLAY, MediaActionHandler.SOURCE_FOREGROUND_KEY, null);
-		}
-	} //doPlayStop()
-	
-	private void getProgramInfo()
-	{
-		// アクティブインジケーターを表示
-		_aiView = new ActivityIndicatorView(Field.USE_ALL_WIDTH);
-		ActivityIndicatorModel aiModel = new ActivityIndicatorModel();
-		ActivityIndicatorController aiController = new ActivityIndicatorController();
-		
-		_aiView.setController(aiController);
-		_aiView.setModel(aiModel);
-		_aiView.setMargin(5, 0, 5, 0);
-		
-		aiController.setModel(aiModel);
-		aiController.setView(_aiView);
-		aiModel.setController(aiController);
-		Bitmap aiBitmap = Bitmap.getBitmapResource("spinner2.png");
-		
-		_aiView.createActivityImageField(aiBitmap, 6, Field.FIELD_HCENTER);
-		
-		synchronized (UiApplication.getEventLock()) 
-		{
-			setStatus(_aiView);
-		}
-		
-		
-		// 番組情報更新
-		new Thread(new Runnable()
-		{
-			public void run()
-			{
-				try {
-					updateStatus("PGInfoThread Start");
-					
-					int num = 0;
-					
-					// RELOAD ProgramInfo
-					_app._epg.getProgramInfo();
-					
-					Vector stationsInfoV = _app._epg.GetStationsInfoV();
-					for(Enumeration e = stationsInfoV.elements(); e.hasMoreElements(); )
-					{
-						// GET OuterHFM
-						Field[] fields = dataTemplate.getDataFields(num);
-						HorizontalFieldManager outerHFM = (HorizontalFieldManager) fields[0];
-						
-						// GET RightVFM
-						VerticalFieldManager rightVFM = (VerticalFieldManager) outerHFM.getField(1);
-						
-						// SET NewData
-						Hashtable station = (Hashtable) e.nextElement();
-						Hashtable htb = (Hashtable) station.get("prog_now");
-						synchronized (UiApplication.getEventLock()) 
-						{
-							((LabelField)rightVFM.getField(1)).setText(htb.get("time"));
-							((LabelField)rightVFM.getField(2)).setText(htb.get("title"));
-							((LabelField)rightVFM.getField(3)).setText(htb.get("pfm"));
-						}
-						
-						num++;
-					} //for
-					
-					// CLEANUP Status
-					synchronized (UiApplication.getEventLock()) 
-					{
-						setStatus(null);
-					}
-				}
-				catch (Exception e)
-				{
-					updateStatusField("番組情報の更新に失敗しました。");
-				} //try
-			} //run()
-		}).start();
-		
-	} //getProgramInfo()
-	
-	private void init_setupTransport()
-	{
-		updateStatusField("トランスポートを選択中...");
-		_app.selectTransport();
-	}
-	
-	private void init_doAuth()
-	{
-		updateStatusField("エリア判定 & 認証中...");
-		
-		try {
-			_app._auth.doAuth();
-		} catch (Exception e) {
-			
-			UiApplication.getUiApplication().invokeAndWait(new Runnable()
-			{
-				public void run()
-				{
-					int select = Dialog.ask("エリア判定、認証に失敗しました。", new Object[]{"再試行", "終了"}, 0);
-					// 終了、キャンセルの場合はアプリ強制終了
-					if(select == 1 || select == Dialog.CANCEL)
-					{
-						isForcedTermination = true;
-						close();
-					}
-				}
-			});
-			// 再試行
-			init_doAuth();
-		} //try
-	} //init_doAuth()
-	
-	private void init_getStationList()
-	{
-		updateStatusField("放送局を取得中...");
-		
-		try {
-			_app._epg.getStationList();
-		} catch (Exception e) {
-			UiApplication.getUiApplication().invokeAndWait(new Runnable()
-			{
-				public void run()
-				{
-					int select = Dialog.ask("放送局の取得中に失敗しました。", new Object[]{"再試行", "終了"}, 0);
-					// 終了、キャンセルの場合はアプリ強制終了
-					if(select == 1 || select == Dialog.CANCEL)
-					{
-						isForcedTermination = true;
-						close();
-					}
-				}
-			});
-			// 再試行
-			init_getStationList();
-		} //try
-	} //init_getStationList()
-	
-	private void init_makeMenu()
-	{
-		MenuItem _prog = new MenuItem(new StringProvider("Earpiece ON/OFF"), 0x00020000, 0);
-		_prog.setCommand(new Command(
-				new CommandHandler()
-				{
-					public void execute(ReadOnlyCommandMetadata metadata, Object context)
-					{
-						_app._mediaActions.SetAudioPath();
-					}
-				}
-				));
-		addMenuItem(_prog);
-		
-		
-		MenuItem _tester = new MenuItem(new StringProvider("更新"), 0x00020000, 1);
-		_tester.setCommand(new Command(
-				new CommandHandler()
-				{
-					public void execute(ReadOnlyCommandMetadata metadata, Object context)
-					{
-						getProgramInfo();
-					}
-				}
-				));
-		addMenuItem(_tester);
-		
-	} //init_makeMenu()
-	
-	private void showEPGScreen()
-	{
-		//---- For EPGScreen ----//
-		EPGScreen _epgScreen = new EPGScreen(_tableView.getRowNumberWithFocus());
-		
-		// FADE IN
-		TransitionContext transIN = new TransitionContext(TransitionContext.TRANSITION_FADE);
-		transIN.setIntAttribute(TransitionContext.ATTR_DURATION, 100);
-		
-		UiEngineInstance engine = Ui.getUiEngineInstance();
-		engine.setTransition(null, _epgScreen, UiEngineInstance.TRIGGER_PUSH, transIN);
-		
-		// FADE OUT
-		TransitionContext transOUT = new TransitionContext(TransitionContext.TRANSITION_FADE);
-		transOUT.setIntAttribute(TransitionContext.ATTR_DURATION, 100);
-		transOUT.setIntAttribute(TransitionContext.ATTR_KIND, TransitionContext.KIND_OUT);
-		
-		engine.setTransition(_epgScreen, null, UiEngineInstance.TRIGGER_POP, transOUT);
-		
-		_app.pushScreen(_epgScreen);
-	} //showEPGScreen()
-	
-	private void showProgScreen(String val)
-	{
-		Hashtable station = (Hashtable) _app._epg.GetStationsInfoV().elementAt(_tableView.getRowNumberWithFocus());
-		Hashtable prog = (Hashtable) station.get(val);
-		
-		//---- For ProgInfoScreen ----//
-		ProgInfoScreen _progInfoScreen = new ProgInfoScreen(prog);
-		
-		// FADE IN
-		TransitionContext transIN = new TransitionContext(TransitionContext.TRANSITION_FADE);
-		transIN.setIntAttribute(TransitionContext.ATTR_DURATION, 100);
-		
-		UiEngineInstance engine = Ui.getUiEngineInstance();
-		engine.setTransition(null, _progInfoScreen, UiEngineInstance.TRIGGER_PUSH, transIN);
-		
-		// FADE OUT
-		TransitionContext transOUT = new TransitionContext(TransitionContext.TRANSITION_FADE);
-		transOUT.setIntAttribute(TransitionContext.ATTR_DURATION, 100);
-		transOUT.setIntAttribute(TransitionContext.ATTR_KIND, TransitionContext.KIND_OUT);
-		
-		engine.setTransition(_progInfoScreen, null, UiEngineInstance.TRIGGER_POP, transOUT);
-		
-		_app.pushScreen(_progInfoScreen);
-	} //showProgScreen()
 	
 	private class CountDown extends TimerTask
 	{
@@ -765,7 +584,7 @@ public class MyScreen extends MainScreen
 		}
 		public Vector getItems(Field field)
 		{
-			isContextMenuOpened = true;
+			//isContextMenuOpened = true;
 			
 			Vector items = new Vector();
 			
@@ -774,7 +593,7 @@ public class MyScreen extends MainScreen
 			{
 				public void execute(ReadOnlyCommandMetadata metadata, Object context) 
 				{
-					doPlayStop();
+					_app.doPlayStop(_tableView.getRowNumberWithFocus());
 				}
 			})));
 			
@@ -783,7 +602,7 @@ public class MyScreen extends MainScreen
 			{
 				public void execute(ReadOnlyCommandMetadata metadata, Object context) 
 				{
-					showEPGScreen();
+					_app.showEPGScreen(_tableView.getRowNumberWithFocus());
 				}
 			})));
 			
@@ -791,7 +610,9 @@ public class MyScreen extends MainScreen
 			{
 				public void execute(ReadOnlyCommandMetadata metadata, Object context) 
 				{
-					showProgScreen(ProgInfoScreen.CURRENT);
+					Station tmp_station = _app.getStationByIndex(_tableView.getRowNumberWithFocus());
+					Program[] tmp_progs = tmp_station.getPrograms();
+					_app.showProgScreen(tmp_progs[0]);
 				}
 			})));
 			
@@ -799,7 +620,9 @@ public class MyScreen extends MainScreen
 			{
 				public void execute(ReadOnlyCommandMetadata metadata, Object context) 
 				{
-					showProgScreen(ProgInfoScreen.NEXT);
+					Station tmp_station = _app.getStationByIndex(_tableView.getRowNumberWithFocus());
+					Program[] tmp_progs = tmp_station.getPrograms();
+					_app.showProgScreen(tmp_progs[1]);
 				}
 			})));
 			
@@ -807,7 +630,7 @@ public class MyScreen extends MainScreen
 			{
 				public void execute(ReadOnlyCommandMetadata metadata, Object context) 
 				{
-					getProgramInfo();
+					_app.updateProgramInfo();
 				}
 			})));
 			
