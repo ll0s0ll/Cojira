@@ -145,6 +145,8 @@ public class Network
 				if(is != null){ is.close(); is = null; }
 				if(httpconn != null){ httpconn.close(); httpconn = null; }
 			}
+			
+			Thread.sleep(1000);
 		}
 		throw new Exception(errorlog);
 	} //getWebBitmap()
