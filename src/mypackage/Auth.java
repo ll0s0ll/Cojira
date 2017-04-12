@@ -80,10 +80,16 @@ public class Auth
 		//
 		Hashtable property = new Hashtable();
 		property.put("pragma", "no-cache");
+		property.put("X-Radiko-App", "pc_ts");
+		property.put("X-Radiko-App-Version", "4.0.0");
+		property.put("X-Radiko-AuthToken", authToken);
+		property.put("X-Radiko-PartialKey", partialkey);
+		/*　以下はver0.3までの値
 		property.put("X-Radiko-App", "pc_1");
 		property.put("X-Radiko-App-Version", "2.0.1");
 		property.put("X-Radiko-Authtoken", authToken);
 		property.put("X-Radiko-Partialkey", partialkey);
+		*/
 		
 		String errorlog = "Auth::getAreaID()\n";
 		
@@ -156,8 +162,10 @@ public class Auth
 		
 		Hashtable property = new Hashtable();
 		property.put("pragma", "no-cache");
-		property.put("X-Radiko-App", "pc_1");
-		property.put("X-Radiko-App-Version", "2.0.1");
+		property.put("X-Radiko-App", "pc_ts");
+		property.put("X-Radiko-App-Version", "4.0.0");
+		//property.put("X-Radiko-App", "pc_1"); <-ver0.3まで
+		//property.put("X-Radiko-App-Version", "2.0.1"); <-ver0.3まで
 		property.put("X-Radiko-User", "test-stream");
 		property.put("X-Radiko-Device", "pc");
 		
@@ -223,8 +231,9 @@ public class Auth
 		{
 			HttpConnection httpconn = null;
 			
-			try {
-				final String url = "http://radiko.jp/player/swf/player_3.0.0.01.swf";
+			try { 
+				final String url = "http://radiko.jp/apps/js/flash/myplayer-release.swf";
+				//final String url = "http://radiko.jp/player/swf/player_3.0.0.01.swf"; <-ver0.3まで
 				
 				httpconn = Network.doGet(_connfactory, url);
 				
@@ -389,8 +398,10 @@ public class Auth
 					
 					byte[] tag = readbytesFromStream(_zlibIS, 2);
 					
-					// 目的のデータは14に保存されている。14の場合のみ処理
-					if(decodeInt16(tag) == 14) {
+					// 目的のデータは12に保存されている。12の場合のみ処理
+					if(decodeInt16(tag) == 12) {
+					// 目的のデータは14に保存されている。14の場合のみ処理 <-ver0.3まで 
+					//if(decodeInt16(tag) == 14) {
 						byte[] reserved = readbytesFromStream(_zlibIS, 4);
 						
 						if(decodeInt32(reserved) != 0) 
